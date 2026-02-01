@@ -30,6 +30,12 @@ trait Audio
         $Client->setChannelsUid($channels_uid);
         return $Client->post('app/yimind/api/Audio/tts', $data);
     }
+    public static function AudioVoiceClone(int $channels_uid, array $data = [])
+    {
+        $Client = new Client();
+        $Client->setChannelsUid($channels_uid);
+        return $Client->post('app/yimind/api/Audio/cloneVoice', $data);
+    }
     public static function AudioVoiceList(int $channels_uid, array $data = [])
     {
         $Client = new Client();

@@ -1,1 +1,0 @@
-import{_ as o}from"./index-B0RNcuq8.js";import{k as a,l as e,h as t}from"./vendor-t8h0TCfL.js";const c={},r={class:"voice-page"};function i(n,s){return t(),a("div",r,[...s[0]||(s[0]=[e("div",{class:"voice-page-header"},[e("div",{class:"voice-page-header-title"},[e("h1",null,"声音库")])],-1)])])}const _=o(c,[["render",i]]);export{_ as default};

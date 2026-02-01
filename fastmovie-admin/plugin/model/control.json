@@ -2,7 +2,7 @@
     "title": "模型",
     "icon": "Grid",
     "path": "/app/Model/control",
-    "sort":999,
+    "sort": 999,
     "children": [
         {
             "title": "模型管理",
@@ -45,6 +45,42 @@
                     "path": "/app/model/control/Task/delete",
                     "component": "form",
                     "show": false
+                }
+            ]
+        },
+        {
+            "title": "音色",
+            "path": "/app/model/control/Voice/group",
+            "children": [
+                {
+                    "title": "音色列表",
+                    "path": "/app/model/control/Voice/index",
+                    "component": "table"
+                },
+                {
+                    "title": "音色文案",
+                    "path": "/app/model/control/VoiceText/index",
+                    "component": "table",
+                    "children": [
+                        {
+                            "title": "创建音色文案",
+                            "path": "/app/model/control/VoiceText/create",
+                            "component": "form",
+                            "show": false
+                        },
+                        {
+                            "title": "编辑音色文案",
+                            "path": "/app/model/control/VoiceText/update",
+                            "component": "form",
+                            "show": false
+                        },
+                        {
+                            "title": "删除音色文案",
+                            "path": "/app/model/control/VoiceText/delete",
+                            "component": "form",
+                            "show": false
+                        }
+                    ]
                 }
             ]
         }

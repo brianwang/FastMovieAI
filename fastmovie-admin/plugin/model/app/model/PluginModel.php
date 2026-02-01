@@ -19,4 +19,16 @@ class PluginModel extends Basic
     {
         return $this->hasOne(PluginChannelsUser::class, 'id', 'channels_uid');
     }
+    public static function options($where = [])
+    {
+        $models = self::where($where)->field('id,name')->select();
+        $data = [];
+        foreach ($models as $item) {
+            $data[] = [
+                'label' => $item->name,
+                'value' => $item->id,
+            ];
+        }
+        return $data;
+    }
 }

@@ -1,1 +1,0 @@
-import{_ as t}from"./index-B0RNcuq8.js";import{k as r,l as e,h as s}from"./vendor-t8h0TCfL.js";const c={},o={class:"creative-page"};function i(n,a){return s(),r("div",o,[...a[0]||(a[0]=[e("div",{class:"creative-page-header"},[e("div",{class:"creative-page-header-title"},[e("h1",null,"创意圈")])],-1)])])}const _=t(c,[["render",i]]);export{_ as default};

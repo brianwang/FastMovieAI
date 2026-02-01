@@ -243,12 +243,17 @@ class Uploads
      * @param string $dir_name 文件存储目录
      * @return array
      */
-    public static function upload(int $channels_uid, string $path, $channels = null, $dir_name = 'uploads/save')
+    public static function upload(int $channels_uid, string|UploadFile $path, $channels = null, $dir_name = 'uploads/save')
     {
         $date_path = date('Ymd');
-        $originName = basename($path);
         //单文件上传
-        $file = new UploadFile($path, $originName, mime_content_type($path), filesize($path));
+        if (is_string($path)) {
+            $originName = basename($path);
+            $file = new UploadFile($path, $originName, mime_content_type($path), filesize($path));
+        } else {
+            $originName = $path->getUploadName();
+            $file = $path;
+        }
         $config = new Config('filesystem', '', $channels_uid);
         if (!$channels) {
             $channels = $config->default;

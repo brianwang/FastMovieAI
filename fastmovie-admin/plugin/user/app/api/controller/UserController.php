@@ -33,7 +33,7 @@ class UserController extends Basic
             return $this->fail('用户不存在');
         }
         $info = PluginUser::getTokenInfo($user, $request->twofa);
-        $count=PluginUserInvitationCode::where(['uid' => $request->uid])->where('state', State::YES['value'])->where('status', 'unused')->count();
+        $count = PluginUserInvitationCode::where(['uid' => $request->uid])->where('state', State::YES['value'])->where('status', 'unused')->count();
         $info->invitation_code_count = $count;
         return $this->resData($info);
     }
@@ -317,9 +317,9 @@ class UserController extends Basic
     public function getUnusedInvitationCode(Request $request)
     {
         $PluginUserInvitationCode = PluginUserInvitationCode::where(['uid' => $request->uid])
+            ->with(['useUser'])
             ->where('channels_uid', $request->channels_uid)
             ->where('state', State::YES['value'])
-            ->where('status', 'unused')
             ->select();
         return $this->resData($PluginUserInvitationCode);
     }
@@ -335,16 +335,16 @@ class UserController extends Basic
         if (!$PluginUserInvitationCode) {
             return $this->fail('邀请码不存在');
         }
-        if($PluginUserInvitationCode->uid==$request->uid){
+        if ($PluginUserInvitationCode->uid == $request->uid) {
             return $this->fail('不能邀请自己');
         }
-        if(!empty($PluginUserInvitationCode->use_uid)){
+        if (!empty($PluginUserInvitationCode->use_uid)) {
             return $this->fail('邀请码已使用');
         }
         if ($PluginUserInvitationCode->status != 'unused') {
             return $this->fail('邀请码已使用');
         }
-        if($PluginUserInvitationCode->state != State::YES['value']){
+        if ($PluginUserInvitationCode->state != State::YES['value']) {
             return $this->fail('邀请码已失效');
         }
         $PluginUserInvitationCode->status = 'used';
@@ -372,7 +372,7 @@ class UserController extends Basic
             return $this->fail('参数错误');
         }
         Vcode::check($username, $vcode, VcodeScene::BIND_MOBILE['value'], $token);
-        $PluginUser = PluginUser::where(['mobile' => $mobile,'channels_uid' => $request->channels_uid])->find();
+        $PluginUser = PluginUser::where(['mobile' => $mobile, 'channels_uid' => $request->channels_uid])->find();
         if ($PluginUser) {
             PluginUser::where(['id' => $request->uid])->update(['username' => '']);
             $wechat = PluginUserWechat::where(['uid' => $request->uid])->find();
@@ -390,10 +390,10 @@ class UserController extends Basic
     }
 
     /**
-    * 修改密码
-    * @author:1950781041@qq.com 
-    * @Date:2026-01-17
-    */
+     * 修改密码
+     * @author:1950781041@qq.com 
+     * @Date:2026-01-17
+     */
     public function setPassword(Request $request)
     {
         $password = $request->post('password');
@@ -411,10 +411,10 @@ class UserController extends Basic
     }
 
     /**
-    * 验证邀请码是否被使用
-    * @author:1950781041@qq.com 
-    * @Date:2026-01-26
-    */
+     * 验证邀请码是否被使用
+     * @author:1950781041@qq.com 
+     * @Date:2026-01-26
+     */
     public function checkInvitationCode(Request $request)
     {
         $code = $request->post('code');
@@ -422,10 +422,10 @@ class UserController extends Basic
         if (!$PluginUserInvitationCode) {
             return $this->fail('邀请码不存在');
         }
-        if($PluginUserInvitationCode->uid==$request->uid){
+        if ($PluginUserInvitationCode->uid == $request->uid) {
             return $this->fail('不能邀请自己');
         }
-        if(!empty($PluginUserInvitationCode->use_uid)){
+        if (!empty($PluginUserInvitationCode->use_uid)) {
             return $this->fail('邀请码已使用');
         }
         if ($PluginUserInvitationCode->status != 'unused') {

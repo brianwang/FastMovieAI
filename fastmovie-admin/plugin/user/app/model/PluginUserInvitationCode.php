@@ -64,6 +64,7 @@ class PluginUserInvitationCode extends Basic
             if ($register->invite_reward_points) {
                 Account::incPoints($model->uid, $model->channels_uid, $register->invite_reward_points, PointsBillScene::INVITE['value'], 0, '邀请奖励积分');
             }
+            PluginUserInvitationCode::where('id', $model->id)->update(['points' => $register->invite_reward_points]);
         }
     }
 }

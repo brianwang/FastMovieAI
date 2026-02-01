@@ -27,7 +27,7 @@ use plugin\shortplay\app\model\PluginShortplayDramaStoryboardActor;
 use plugin\shortplay\app\model\PluginShortplayDramaStoryboardDialogue;
 use plugin\shortplay\app\model\PluginShortplayDramaStoryboardProp;
 use plugin\shortplay\app\model\PluginShortplayStyle;
-use plugin\shortplay\app\model\PluginShortplayVoice;
+use plugin\model\app\model\PluginModelVoice;
 use plugin\shortplay\utils\enum\ActorAge;
 use plugin\shortplay\utils\enum\ActorGender;
 use plugin\shortplay\utils\enum\ActorSpeciesType;
@@ -1280,16 +1280,16 @@ class GenerateController extends Basic
         }
         $voice_id = $voice['voice_id'];
         $voice_channel = $voice['voice_channel'];
-        $voice_name = '';
-        if ($voice_channel === 'custom') {
-            $PluginShortplayVoice = PluginShortplayVoice::where(['id' => $voice_id])->find();
-            if (!$PluginShortplayVoice) {
+        $clone_voice_id = '';
+        if ($voice_channel === 'self') {
+            $PluginModelVoice = PluginModelVoice::where(['id' => $voice['id']])->find();
+            if (!$PluginModelVoice) {
                 return $this->fail('音色不存在');
             }
             $voice_id = '';
-            $voice_name = $PluginShortplayVoice->voice_id;
+            $clone_voice_id = $PluginModelVoice->voice_id;
         }
-        if (!$voice_name && !$voice_id) {
+        if (!$clone_voice_id && !$voice_id) {
             return $this->fail('未找到音色');
         }
         $language = empty($voice['selected_language']['value']) ? VoiceLanguage::ZH['value'] : $voice['selected_language']['value'];
@@ -1302,7 +1302,7 @@ class GenerateController extends Basic
             'form_data' => [
                 'text' => $PluginShortplayDramaStoryboardDialogue->content,
                 'voice_id' => $voice_id,
-                'voice_name' => $voice_name,
+                'clone_voice_id' => $clone_voice_id,
                 'emotion' => $emotion,
                 'volume' => $volume,
                 'speed' => $speed,
@@ -1401,16 +1401,16 @@ class GenerateController extends Basic
         }
         $voice_id = $voice['voice_id'];
         $voice_channel = $voice['voice_channel'];
-        $voice_name = '';
-        if ($voice_channel === 'custom') {
-            $PluginShortplayVoice = PluginShortplayVoice::where(['id' => $voice_id])->find();
-            if (!$PluginShortplayVoice) {
+        $clone_voice_id = '';
+        if ($voice_channel === 'self') {
+            $PluginModelVoice = PluginModelVoice::where(['id' => $voice['id']])->find();
+            if (!$PluginModelVoice) {
                 return $this->fail('音色不存在');
             }
             $voice_id = '';
-            $voice_name = $PluginShortplayVoice->voice_id;
+            $clone_voice_id = $PluginModelVoice->voice_id;
         }
-        if (!$voice_name && !$voice_id) {
+        if (!$clone_voice_id && !$voice_id) {
             return $this->fail('未找到音色');
         }
         $language = empty($voice['selected_language']['value']) ? VoiceLanguage::ZH['value'] : $voice['selected_language']['value'];
@@ -1423,7 +1423,7 @@ class GenerateController extends Basic
             'form_data' => [
                 'text' => $PluginShortplayDramaStoryboard->narration,
                 'voice_id' => $voice_id,
-                'voice_name' => $voice_name,
+                'clone_voice_id' => $clone_voice_id,
                 'emotion' => $emotion,
                 'volume' => $volume,
                 'speed' => $speed,

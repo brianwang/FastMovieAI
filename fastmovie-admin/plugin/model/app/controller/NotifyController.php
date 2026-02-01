@@ -6,12 +6,13 @@ use app\Basic;
 use app\expose\enum\State;
 use plugin\finance\expose\helper\Account;
 use plugin\model\app\model\PluginModelTask;
+use plugin\model\app\model\PluginModelVoice;
 use plugin\model\utils\enum\ModelScene;
 use plugin\model\utils\enum\ModelTaskStatus;
 use plugin\model\utils\enum\ModelType;
+use plugin\model\utils\enum\ModelVoiceStatus;
 use plugin\notification\expose\helper\Push;
 use plugin\shortplay\app\model\PluginShortplayActorCharacterLook;
-use plugin\shortplay\app\model\PluginShortplayDramaStoryboardActor;
 use plugin\shortplay\utils\enum\ActorStatus;
 use plugin\shortplay\utils\enum\PropStatus;
 use support\Log;
@@ -22,7 +23,6 @@ class NotifyController extends Basic
 {
     public function draw(Request $request)
     {
-        p($request->post());
         Log::error('draw' . json_encode($request->post()));
         $taskId = $request->post('task_id');
         $PluginModelTask = PluginModelTask::where(['task_id' => $taskId, 'model_type' => ModelType::DRAW['value']])->with(['result'])->find();
@@ -134,7 +134,6 @@ class NotifyController extends Basic
     }
     public function video(Request $request)
     {
-        p($request->post());
         Log::error('video' . json_encode($request->post()));
         $taskId = $request->post('task_id');
         $PluginModelTask = PluginModelTask::where(['task_id' => $taskId, 'model_type' => ModelType::TOVIDEO['value']])->with(['result'])->find();
@@ -174,7 +173,6 @@ class NotifyController extends Basic
     }
     public function audio(Request $request)
     {
-        p($request->post());
         Log::error('audio' . json_encode($request->post()));
         $taskId = $request->post('task_id');
         $PluginModelTask = PluginModelTask::where(['task_id' => $taskId, 'model_type' => ModelType::AUDIO['value']])->with(['result'])->find();
@@ -207,6 +205,38 @@ class NotifyController extends Basic
                 'event' => 'generate' . strtolower(str_replace('_', '', $PluginModelTask->scene)),
             ], $pushData);
         }
+        return 'success';
+    }
+    public function voiceClone(Request $request)
+    {
+        Log::error('voiceClone' . json_encode($request->post()));
+        $taskId = $request->post('task_id');
+        $PluginModelVoice = PluginModelVoice::where(['task_id' => $taskId])->find();
+        if (!$PluginModelVoice) {
+            return 'success';
+        }
+        $status = $request->post('status');
+        if ($status == ModelTaskStatus::SUCCESS['value']) {
+            $PluginModelVoice->status = ModelVoiceStatus::SUCCESS['value'];
+            $PluginModelVoice->voice_id = $request->post('voice_id');
+            $PluginModelVoice->save();
+            $pushData = [
+                'id' => $PluginModelVoice->id,
+                'status' => ModelVoiceStatus::SUCCESS['value'],
+            ];
+        } elseif ($status == ModelTaskStatus::FAIL['value']) {
+            $PluginModelVoice->status = ModelVoiceStatus::FAIL['value'];
+            $PluginModelVoice->message = $request->post('message');
+            $PluginModelVoice->save();
+            $pushData = [
+                'id' => $PluginModelVoice->id,
+                'status' => ModelVoiceStatus::FAIL['value'],
+            ];
+        }
+        Push::send([
+            'uid' => $PluginModelVoice->uid,
+            'event' => 'clonevoice',
+        ], $pushData);
         return 'success';
     }
 }

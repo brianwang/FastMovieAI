@@ -82,4 +82,9 @@ class AuthType extends Enum
         'value' => 'generatecreatedrama',
         'action' => 'user',
     ];
+    const CLONE_VOICE = [
+        'label' => '克隆音色',
+        'value' => 'clonevoice',
+        'action' => 'user',
+    ];
 }

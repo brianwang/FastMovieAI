@@ -10,8 +10,10 @@ use app\expose\enum\Filesystem;
 use app\expose\enum\ResponseEvent;
 use app\expose\helper\Config;
 use app\expose\helper\Menus;
+use app\expose\utils\DatabaseSchemaSync;
 use loong\oauth\facade\Auth;
 use support\Request;
+use support\think\Db;
 
 class PublicController extends Basic
 {
@@ -58,6 +60,15 @@ class PublicController extends Basic
             'icon' => 'FullScreen',
             'tips' => trans('toolbar FullScreen', [], $domain, $lang),
         ]);
+        /* $toolbar->add(EnumAction::COMFIRM['value'], [
+            'path' => 'Public/syncSql',
+            'icon' => 'Coin',
+            'tips' => trans('同步SQL', [], $domain, $lang),
+            'props' => [
+                'message' => '检测到有SQL未同步，确定要同步SQL吗？',
+                'confirmButtonClass' => 'el-button--danger'
+            ]
+        ]); */
         $toolbar->add(EnumAction::LINK['value'], [
             'icon' => 'House',
             'tips' => trans('toolbar House', [], $domain, $lang),
