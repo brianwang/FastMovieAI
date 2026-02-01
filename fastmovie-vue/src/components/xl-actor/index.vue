@@ -102,7 +102,7 @@ onMounted(() => {
                     </el-icon>
                     <span>添加演员</span>
                 </div>
-                <div class="grid-column-2 input-button rounded-4 p-4   flex flex-center grid-gap-2 actor-item actor-item-b"
+                <div class="grid-column-2 rounded-4 p-4   flex flex-center grid-gap-2 actor-item actor-item-b"
                     v-for="item in actorList" @click="handleActorItemClick(item)">
                     <el-avatar :src="item.headimg" :size="40">
                         {{ truncate(item.name, 1) }}

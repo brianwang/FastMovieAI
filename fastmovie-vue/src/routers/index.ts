@@ -103,6 +103,14 @@ const router = createRouter({
                             next({ name: 'index' })
                         }
                     },
+                },
+                {
+                    path: '/voice/create',
+                    name: 'voice-create',
+                    component: () => import("@/pages/voice/create.vue"),
+                    meta: {
+                        title: '创建声音',
+                    }
                 }
             ]
         },

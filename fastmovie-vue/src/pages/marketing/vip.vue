@@ -178,7 +178,7 @@ onBeforeUnmount(() => {
     width: 330px;
     height: 500px;
     border-radius: 20px;
-    background-color: #171717;
+    background-color: var(--el-bg-color-overlay);
     border: 1px solid #272727;
     padding: 20px;
     display: flex;

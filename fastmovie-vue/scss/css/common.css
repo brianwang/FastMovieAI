@@ -4548,6 +4548,11 @@
   background-color: var(--el-bg-color-page);
 }
 
+.bg-info,
+.hover-bg-info:hover {
+  background-color: var(--el-color-info);
+}
+
 .bg-gray,
 .hover-bg-gray:hover {
   background-color: #272727;
@@ -5070,6 +5075,16 @@
   border-top-color: var(--el-bg-color-page);
 }
 
+.border-info,
+.border-top-info {
+  border-top-color: var(--el-color-info);
+}
+
+.border-hover-info:hover,
+.border-hover-top-info:hover {
+  border-top-color: var(--el-color-info);
+}
+
 .border-gray,
 .border-top-gray {
   border-top-color: #272727;
@@ -5265,6 +5280,16 @@
 .border-hover-page:hover,
 .border-hover-right-page:hover {
   border-right-color: var(--el-bg-color-page);
+}
+
+.border-info,
+.border-right-info {
+  border-right-color: var(--el-color-info);
+}
+
+.border-hover-info:hover,
+.border-hover-right-info:hover {
+  border-right-color: var(--el-color-info);
 }
 
 .border-gray,
@@ -5464,6 +5489,16 @@
   border-bottom-color: var(--el-bg-color-page);
 }
 
+.border-info,
+.border-bottom-info {
+  border-bottom-color: var(--el-color-info);
+}
+
+.border-hover-info:hover,
+.border-hover-bottom-info:hover {
+  border-bottom-color: var(--el-color-info);
+}
+
 .border-gray,
 .border-bottom-gray {
   border-bottom-color: #272727;
@@ -5659,6 +5694,16 @@
 .border-hover-page:hover,
 .border-hover-left-page:hover {
   border-left-color: var(--el-bg-color-page);
+}
+
+.border-info,
+.border-left-info {
+  border-left-color: var(--el-color-info);
+}
+
+.border-hover-info:hover,
+.border-hover-left-info:hover {
+  border-left-color: var(--el-color-info);
 }
 
 .border-gray,

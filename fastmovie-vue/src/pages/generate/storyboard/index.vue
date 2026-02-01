@@ -850,7 +850,7 @@ const currentDialogue = ref<any>();
 const dialogueModel = ref<any>({});
 const handleCurrentDialogue = (dialogue?: any) => {
     if (dialogue?.voice) {
-        dialogue.voice.selected_emotion = dialogue.voice.emotions_enum.find((item: any) => item.value === dialogue.emotion);
+        dialogue.voice.selected_emotion = dialogue.voice.emotions_enum?.find((item: any) => item.value === dialogue.emotion);
         dialogueModel.value = modelStore.get('dialogue_voice', dialogue.voice.model_id);
     }
     currentDialogue.value = dialogue;
@@ -1994,12 +1994,13 @@ defineExpose({
                                                     shape="square">{{ truncate(currentDialogue.voice.name, 1)
                                                     }}</el-avatar>
                                                 <div class="flex-1 flex flex-column grid-gap-2">
-                                                    <span>{{ currentDialogue.voice.name }}</span>
-                                                    <div class="flex grid-gap-2">
-                                                        <span class="bg-overlay h10 rounded-2 py-1 px-2">{{
-                                                            currentDialogue.voice.gender_enum.label }}</span>
-                                                        <span class="bg-overlay h10 rounded-2 py-1 px-2">{{
-                                                            currentDialogue.voice.age_enum.label }}</span>
+                                                    <span v-if="currentDialogue.voice.name">{{ currentDialogue.voice.name }}</span>
+                                                    <span v-else>未命名</span>
+                                                    <div class="flex grid-gap-2" v-if="currentDialogue.voice.gender_enum && currentDialogue.voice.age_enum">
+                                                        <span class="bg-overlay h10 rounded-2 py-1 px-2" v-if="currentDialogue.voice.gender_enum?.label">{{
+                                                            currentDialogue.voice.gender_enum?.label }}</span>
+                                                        <span class="bg-overlay h10 rounded-2 py-1 px-2" v-if="currentDialogue.voice.age_enum?.label">{{
+                                                            currentDialogue.voice.age_enum?.label }}</span>
                                                     </div>
                                                 </div>
                                                 <el-icon color="var(--el-color-info)" size="24" class="pointer" @click="dialogueVoiceDialogRef?.open({
@@ -2011,7 +2012,7 @@ defineExpose({
                                             </div>
                                             <div class="flex grid-gap-10">
                                                 <span style="width: 18px;"></span>
-                                                <template v-if="currentDialogue.voice.emotions_enum.length > 0">
+                                                <template v-if="currentDialogue.voice.emotions_enum?.length > 0">
                                                     <el-popover popper-class="episode-popover" placement="bottom"
                                                         width="fit-content">
                                                         <template #reference>
@@ -2036,7 +2037,7 @@ defineExpose({
                                                         </div>
                                                     </el-popover>
                                                 </template>
-                                                <template v-if="currentDialogue.voice.emotions_enum.length > 0">
+                                                <template v-if="currentDialogue.voice.emotions_enum?.length > 0">
                                                     <el-popover popper-class="episode-popover" placement="bottom"
                                                         width="fit-content">
                                                         <template #reference>
@@ -2194,12 +2195,13 @@ defineExpose({
                                             <el-avatar :src="dramaInfo.voice.headimg" fit="contain" :size="40"
                                                 shape="square">{{ truncate(dramaInfo.voice.name, 1) }}</el-avatar>
                                             <div class="flex-1 flex flex-column grid-gap-2">
-                                                <span>{{ dramaInfo.voice.name }}</span>
-                                                <div class="flex grid-gap-2">
-                                                    <span class="bg-overlay h10 rounded-2 py-1 px-2">{{
-                                                        dramaInfo.voice.gender_enum.label }}</span>
-                                                    <span class="bg-overlay h10 rounded-2 py-1 px-2">{{
-                                                        dramaInfo.voice.age_enum.label }}</span>
+                                                <span v-if="dramaInfo.voice.name">{{ dramaInfo.voice.name }}</span>
+                                                <span v-else>未命名</span>
+                                                <div class="flex grid-gap-2" v-if="dramaInfo.voice.gender_enum && dramaInfo.voice.age_enum">
+                                                    <span class="bg-overlay h10 rounded-2 py-1 px-2" v-if="dramaInfo.voice.gender_enum?.label">{{
+                                                        dramaInfo.voice.gender_enum?.label }}</span>
+                                                    <span class="bg-overlay h10 rounded-2 py-1 px-2" v-if="dramaInfo.voice.age_enum?.label">{{
+                                                        dramaInfo.voice.age_enum?.label }}</span>
                                                 </div>
                                             </div>
                                             <el-icon color="var(--el-color-info)" size="24" class="pointer" @click="narrationVoiceDialogRef?.open({
@@ -2211,7 +2213,7 @@ defineExpose({
                                         </div>
                                         <div class="flex grid-gap-10">
                                             <span style="width: 18px;"></span>
-                                            <template v-if="dramaInfo.voice.emotions_enum.length > 0">
+                                            <template v-if="dramaInfo.voice.emotions_enum?.length > 0">
                                                 <el-popover popper-class="episode-popover" placement="bottom"
                                                     width="fit-content">
                                                     <template #reference>
@@ -2234,7 +2236,7 @@ defineExpose({
                                                     </div>
                                                 </el-popover>
                                             </template>
-                                            <template v-if="dramaInfo.voice.emotions_enum.length > 0">
+                                            <template v-if="dramaInfo.voice.emotions_enum?.length > 0">
                                                 <el-popover popper-class="episode-popover" placement="bottom"
                                                     width="fit-content">
                                                     <template #reference>

@@ -70,7 +70,7 @@ onMounted(() => {
                     </el-icon>
                     <span>添加物品</span>
                 </div>
-                <div class="grid-column-2 input-button rounded-4 p-4 border-2 border-solid flex flex-center grid-gap-2 prop-item"
+                <div class="grid-column-2 rounded-4 p-4 border-2 border-solid flex flex-center grid-gap-2 prop-item"
                     v-for="item in propList" @click="handlePropItemClick(item)">
                     <el-avatar :src="item.image" :size="40">
                         {{ truncate(item.name, 1) }}

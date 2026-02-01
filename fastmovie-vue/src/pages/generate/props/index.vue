@@ -354,7 +354,7 @@ onUnmounted(() => {
                             </el-icon>
                             <span>添加物品</span>
                         </div>
-                        <div class="grid-column-1 input-button rounded-4 flex flex-column flex-center grid-gap-2 prop-item bg-overlay border"
+                        <div class="grid-column-1 rounded-4 flex flex-column flex-center grid-gap-2 prop-item bg-overlay border"
                             :class="{ 'border-success': item.id === currentPropForm.id }" v-for="item in propList"
                             :key="item.id">
                             <el-avatar :src="item.image" class="prop-avatar bg-mosaic"

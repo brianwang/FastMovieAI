@@ -1,11 +1,11 @@
 <script setup lang="ts">
 import { ResponseCode } from '@/common/const';
-import { setClipboard } from '@/common/functions';
 import { $http } from '@/common/http';
 import IconBatchSvg from '@/svg/icon/icon-batch.vue';
 import IconModelSvg from '@/svg/icon/icon-model.vue';
 import IconPointsSvg from '@/svg/icon/icon-points.vue';
 import IconReplaceSvg from '@/svg/icon/icon-replace.vue';
+import IconPropSvg from '@/svg/icon/icon-prop.vue';
 import { useUserStore, useRefs } from '@/stores';
 import { useRoute } from 'vue-router';
 import { Loading } from '@element-plus/icons-vue';
@@ -15,11 +15,26 @@ const route = useRoute();
 const userStore = useUserStore();
 const { USERINFO } = useRefs(userStore);
 const drama_id = ref<string | number>(route.params.drama_id as string | number)
+const emit = defineEmits(['update:drama']);
+const dramaInfo = ref<any>({});
+const getDramaInfo = () => {
+    if (!drama_id.value) return;
+    $http.get('/app/shortplay/api/Works/details', { params: { id: drama_id.value } }).then((res: any) => {
+        if (res.code === ResponseCode.SUCCESS) {
+            dramaInfo.value = res.data;
+            emit('update:drama', dramaInfo.value);
+        } else {
+            ElMessage.error(res.msg);
+        }
+    }).catch(() => {
+        ElMessage.error('获取短剧详情失败');
+    })
+}
 const PropSearch = reactive({
     type: 'drama',
     name: '',
     prop_id: '',
-    drama_id: drama_id.value,
+    drama_id: drama_id.value
 })
 const propList = ref<any[]>([]);
 const loading = ref(false);
@@ -43,24 +58,28 @@ watch(propList, () => {
     try {
         const find = propList.value.find((item: any) => item.id === currentProp.value?.id);
         if (find) {
-            currentProp.value = undefined;
             handleCurrentProp(find)
         } else {
-            currentProp.value = undefined;
-            currentPropForm.value = {
-                id: '',
-                drama_id: drama_id.value,
-                name: '',
-                description: '',
-                image_model_id: null,
-                three_view_model_id: null,
-                image_state: false,
-                three_view_image_state: false,
-                image_reference_state: false,
-                reference_image: '',
-                image: '',
-                three_view_image: '',
-            };
+            const defaultProp = propList.value[0];
+            if (defaultProp) {
+                handleCurrentProp(defaultProp);
+            } else {
+                currentProp.value = undefined;
+                currentPropForm.value = {
+                    id: '',
+                    drama_id: drama_id.value,
+                    name: '',
+                    description: '',
+                    image_model_id: null,
+                    three_view_model_id: null,
+                    image_state: false,
+                    three_view_image_state: false,
+                    image_reference_state: false,
+                    reference_image: '',
+                    image: '',
+                    three_view_image: '',
+                };
+            }
         }
     } catch (error) {
         console.error('watch propList error', error);
@@ -80,13 +99,13 @@ const getPropList = () => {
 }
 const previewImageVisible = ref(false);
 const imageList = ref<any[]>([]);
-const handlePreviewImage = (currentItem: any) => {
+/* const handlePreviewImage = (currentItem: any) => {
     if (!currentItem.image && !currentItem.three_view_image) return;
     imageList.value = [currentItem.image, currentItem.three_view_image];
     nextTick(() => {
         previewImageVisible.value = true;
     })
-}
+} */
 const taskList = ref<any[]>([]);
 const taskLoading = ref(false);
 const taskSearch = reactive({
@@ -112,9 +131,6 @@ const getTaskList = () => {
     })
 }
 const handleCurrentProp = (item: any) => {
-    if (item.id === currentProp.value?.id) {
-        return;
-    }
     currentProp.value = item;
     currentPropForm.value.id = item.id;
     currentPropForm.value.name = item.name;
@@ -158,6 +174,10 @@ const points = usePoints([model, threeViewModel]);
 const generateImageLoading = ref(false);
 const handleGenerateImage = () => {
     if (generateImageLoading.value || currentProp.value.status_enum.value === 'pending') return;
+    if (!currentPropForm.value.image_model_id && !currentPropForm.value.three_view_model_id) {
+        ElMessage.error('请先选择物品图模型或三视图模型');
+        return;
+    }
     generateImageLoading.value = true;
     $http.post('/app/shortplay/api/Prop/initializing', {
         ...currentPropForm.value,
@@ -285,6 +305,7 @@ const addListener = () => {
 }
 onMounted(() => {
     getPropList();
+    getDramaInfo();
     addListener();
 })
 onUnmounted(() => {
@@ -297,27 +318,16 @@ onUnmounted(() => {
         <div class="flex-1 flex grid-gap-10 overflow-hidden">
             <div class="flex-1 flex flex-column grid-gap-4 overflow-hidden">
                 <el-form class="flex flex-center grid-gap-4" @submit.prevent="getPropList">
-                    <el-form-item class="mb-0">
-                        <el-button type="success"
-                            :disabled="propList.filter((item: any) => item.status === 'initializing').length <= 0"
-                            @click="handleBatchGenerate">
-                            <el-icon size="16">
-                                <IconBatchSvg />
-                            </el-icon>
-                            <span>批量生成</span>
-                        </el-button>
-                    </el-form-item>
+                    <el-button type="success" size="small"
+                        :disabled="propList.filter((item: any) => item.status === 'initializing').length <= 0"
+                        @click="handleBatchGenerate">
+                        <el-icon size="16">
+                            <IconBatchSvg />
+                        </el-icon>
+                        <span>批量生成</span>
+                    </el-button>
                     <el-form-item class="mb-0">
                         <el-input v-model="PropSearch.name" placeholder="搜索物品" clearable @change="getPropList">
-                            <template #suffix>
-                                <el-icon>
-                                    <Search />
-                                </el-icon>
-                            </template>
-                        </el-input>
-                    </el-form-item>
-                    <el-form-item class="mb-0">
-                        <el-input v-model="PropSearch.prop_id" placeholder="物品ID" clearable @change="getPropList">
                             <template #suffix>
                                 <el-icon>
                                     <Search />
@@ -338,40 +348,49 @@ onUnmounted(() => {
                             </el-icon>
                             <span>添加物品</span>
                         </div>
-                        <div class="grid-column-1 input-button rounded-4 flex flex-column flex-center grid-gap-2 prop-item bg-overlay"
-                            v-for="item in propList" :key="item.id">
+                        <div class="grid-column-1 rounded-4 flex flex-column flex-center grid-gap-2 prop-item bg-overlay border"
+                            :class="{ 'border-success': item.id === currentPropForm.id }" v-for="item in propList"
+                            :key="item.id">
                             <el-avatar :src="item.image" class="prop-avatar bg-mosaic"
-                                :class="{ 'pointer': item.image }" @click="handlePreviewImage(item)" fit="contain">
+                                :class="{ 'pointer': item.image }" @click="handleCurrentProp(item)" fit="cover">
                                 {{ item.name }}
                             </el-avatar>
+                            <div class="prop-edit-mask flex flex-column grid-gap-4 flex-center pointer"
+                                @click="handleCurrentProp(item)">
+                                <div class="flex flex-center bg-overlay rounded-round p-2 pointer grid-gap-2"
+                                    @click.stop="propCreateRef?.upload?.(item, PropSearch.drama_id)">
+                                    <el-icon size="16">
+                                        <UploadFilled />
+                                    </el-icon>
+                                    <span class="h10">手动上传</span>
+                                </div>
+                                <el-popconfirm title="确定删除该物品吗？" width="fit-content" @confirm="handleDeleteProp(item)"
+                                    placement="bottom-end">
+                                    <template #reference>
+                                        <div class="flex flex-center bg-overlay rounded-round p-2 pointer grid-gap-2"
+                                            @click.stop>
+                                            <el-icon size="16">
+                                                <Delete />
+                                            </el-icon>
+                                            <span class="h10">删除物品</span>
+                                        </div>
+                                    </template>
+                                </el-popconfirm>
+                            </div>
                             <div class="flex grid-gap-2 prop-status">
-                                <span class="prop-tag pointer" title="复制物品"
-                                    @click.stop="setClipboard(`@${item.name}(${item.prop_id}) `)">{{
-                                        item.prop_id
-                                    }}</span>
                                 <div class="flex-1"></div>
                                 <div class="flex flex-column flex-y-flex-end grid-gap-2">
                                     <span class="prop-tag" :class="[`prop-tag--` + item.status_enum.props.type]">
                                         {{ item.status_enum.label }}
                                     </span>
-                                    <el-popconfirm title="确定删除该物品吗？" width="fit-content"
-                                        @confirm="handleDeleteProp(item)" placement="bottom-end">
-                                        <template #reference>
-                                            <div class="prop-tag p-2 prop-delete pointer">
-                                                <el-icon size="16">
-                                                    <Delete />
-                                                </el-icon>
-                                            </div>
-                                        </template>
-                                    </el-popconfirm>
                                 </div>
                             </div>
                             <div class="flex flex-column grid-gap-2 prop-info">
                                 <div class="prop-name flex flex-center grid-gap-1 pointer"
                                     :class="{ 'prop-name--success': item.id === currentPropForm.id }"
-                                    @click.stop="handleCurrentProp(item)">
-                                    <el-icon>
-                                        <UserFilled />
+                                    @click.stop="propCreateRef?.open?.(item, PropSearch.drama_id)">
+                                    <el-icon size="16">
+                                        <IconPropSvg />
                                     </el-icon>
                                     <span>{{ item.name }}</span>
                                 </div>
@@ -385,10 +404,6 @@ onUnmounted(() => {
                     <div class="border-bottom flex flex-center">
                         <el-input v-model="currentPropForm.name" placeholder="物品物品" size="large"
                             class="prop-form-input flex-1">
-                            <template #suffix>
-                                <el-button type="primary" bg text size="small"
-                                    @click="propCreateRef?.open?.(currentProp, PropSearch.drama_id)">编辑</el-button>
-                            </template>
                         </el-input>
                     </div>
                     <div class="flex flex-column grid-gap-2 px-4">
@@ -403,7 +418,7 @@ onUnmounted(() => {
                                         <el-avatar :src="model.icon" :alt="model.name" shape="square"
                                             :size="16"></el-avatar>
                                         <span class="h10 text-ellipsis-1" style="max-width: 60px;">{{ model.name
-                                            }}</span>
+                                        }}</span>
                                         <el-icon size="16" class="pointer" @click.stop="handleModelSelect()">
                                             <Close />
                                         </el-icon>
@@ -504,7 +519,7 @@ onUnmounted(() => {
                                 <el-avatar :src="item.result.image_path" fit="contain" shape="square" :size="206">
                                 </el-avatar>
                                 <div class="flex flex-center grid-gap-2 task-item-replace pointer"
-                                    v-if="item.status==='success'&&item.result.image_path !== currentPropForm.image"
+                                    v-if="item.status === 'success' && item.result.image_path !== currentPropForm.image"
                                     @click="handleReplaceProp(item)">
                                     <el-icon>
                                         <Loading class="circular" v-if="replacePropLoading" />
@@ -560,6 +575,7 @@ onUnmounted(() => {
     .prop-form-wrapper {
         width: 450px;
         height: 100%;
+        overflow: hidden;
     }
 
     .prop-item {
@@ -584,6 +600,24 @@ onUnmounted(() => {
             height: 260px;
             width: 100%;
             border-radius: 0px;
+        }
+
+        .bg-overlay {
+            background-color: rgba(0, 0, 0, 0.5);
+        }
+
+        .prop-edit-mask {
+            position: absolute;
+            top: 0;
+            left: 0;
+            height: 260px;
+            width: 100%;
+            opacity: 0;
+            transition: opacity 0.3s ease-in-out;
+
+            &:hover {
+                opacity: 1;
+            }
         }
 
         .prop-status {

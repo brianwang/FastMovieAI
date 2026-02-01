@@ -103,8 +103,8 @@ const { subscribe, unsubscribeAll } = usePush();
 let uuids: string[] = [];
 const addListener = () => {
 	if (userStore.hasLogin()) {
-		subscribe('private-generatecreatedrama-' + USERINFO.value?.user, (res: any) => {
-			if (uuids.includes(res.uuid)) {
+		subscribe('private-clonevoice-' + USERINFO.value?.user, (res: any) => {
+			if (uuids.includes(res.id)) {
 				xlLoading.close();
 				if (res.drama_id) {
 					ElMessage.success(res.msg);
@@ -704,13 +704,11 @@ onUnmounted(() => {
 }
 
 .input-button {
-	// background-color: var(--el-fill-color-darker);
 	background: rgba(255, 255, 255, 0.08);
 	cursor: pointer;
 	border-radius: 20px;
 
 	&:hover {
-		// background-color: var(--el-fill-color-dark);
 		background: rgba(255, 255, 255, 0.16);
 	}
 }

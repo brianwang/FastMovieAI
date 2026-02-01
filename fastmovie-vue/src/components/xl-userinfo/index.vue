@@ -64,16 +64,23 @@ const getArticle = (key: string) => {
     })
 }
 const onChange = (value: string) => {
-    activeValue.value = value;
     if (value !== 'account' && value !== 'logout') {
         getArticle(value);
     }
     if (value === 'logout') {
-        userStore.clearUserInfo();
-        router.push('/');
-        visible.value = false;
-        ElMessage.success('退出登录成功');
+        ElMessageBox.confirm('确定退出登录吗？', '提示', {
+            confirmButtonText: '确定',
+            cancelButtonText: '取消',
+            type: 'warning',
+        }).then(() => {
+            userStore.clearUserInfo();
+            router.push('/');
+            visible.value = false;
+            ElMessage.success('退出登录成功');
+        });
+        return ;
     }
+    activeValue.value = value;
 }
 
 const handleSave = () => {

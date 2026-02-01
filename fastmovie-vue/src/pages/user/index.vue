@@ -27,6 +27,7 @@
         </div>
         <Works v-if="activeName === 'works'" />
         <Actors v-if="activeName === 'actor'" />
+        <Voice v-if="activeName === 'voice'" />
         <xl-invitation-code ref="xlInvitationCodeRef" />
         <xl-userinfo ref="xlUserinfoRef" />
     </div>
@@ -34,6 +35,7 @@
 <script setup lang="ts">
 import Works from './modules/works.vue';
 import Actors from './modules/actors.vue';
+import Voice from './modules/voice.vue';
 import { truncate } from '@/common/functions';
 import { useRefs, useUserStore } from '@/stores';
 import { ref } from 'vue'

@@ -152,7 +152,7 @@ onMounted(() => {
             height: 147px;
             padding: 20px;
 
-            background: #171717;
+            background: var(--el-bg-color-overlay);
             border: 1px solid #272727;
             border-radius: 20px;
 

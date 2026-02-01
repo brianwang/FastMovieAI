@@ -59,7 +59,7 @@ defineExpose({
         </el-form>
         <el-scrollbar height="40vh" v-loading="loading" v-if="storyboardList.length > 0 || loading">
             <div class="grid-columns-8 grid-gap-4">
-                <div class="grid-column-2 input-button rounded-4 border-2 border-solid flex flex-column grid-gap-2 storyboard-item"
+                <div class="grid-column-2 rounded-4 border-2 border-solid flex flex-column grid-gap-2 storyboard-item"
                     v-for="item in storyboardList" @click="handleStoryboardItemClick(item)">
                     <div class="p-2">
                         <span class="h10">场景{{ item.scene_id }} - #{{ item.sort }}</span>

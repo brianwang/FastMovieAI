@@ -1,36 +1,50 @@
 <template>
-    <el-dialog v-model="visible" width="586px" :show-close="false" align-center append-to-body>
-        <template #header>
-            <div class="h1 text-center font-weight-600">邀请你的朋友</div>
-        </template>
-        <div class="flex flex-center flex-column" v-if="list.length > 0">
-            <div class="h8">您还剩 {{ list.length }} 个邀请名额，拥有下方邀请码的任何人都可以加入</div>
-            <div class="h8 mt-5">好友成功注册可得 {{ WEBCONFIG?.register.invite_reward_points || 0 }} 积分</div>
-            <div class="grid-columns-6 grid-gap-6 mt-10">
-                <div v-for="(i, index) in code" :key="index" class="flex flex-center flex-column item">
-                    {{ i }}
+    <el-dialog v-model="visible" title="邀请好友" width="586px" align-center append-to-body class="invitation-dialog">
+
+        <div class="invitation-content">
+            <!-- 邀请码列表 -->
+            <div class="invitation-codes-section" v-if="invitationCodes.length > 0">
+                <div class="h8">您还剩 {{ invitationCodes.filter((item: any) => item.status === 'unused').length }} 个邀请名额，拥有下方邀请码的任何人都可以加入</div>
+                <div class="h8 mt-3">好友成功注册可得 {{ WEBCONFIG?.register?.invite_reward_points || 0 }} 积分</div>
+                <div class="codes-grid">
+                    <div v-for="(item, index) in invitationCodes" :key="index" class="code-item">
+                        <div class="flex  flex-1 grid-gap-3">
+                            <div class="code-text">{{ item.code }}</div>
+                            <div class="code-status">
+                                <span v-if="item.status === 'used'" class="status-tag status-used">已使用</span>
+                                <span v-else class="status-tag status-pending">待使用</span>
+                                <!-- <div v-else-if="item.status === 'reward'" class="status-reward">
+                                    <el-icon class="star-icon">
+                                        <StarFilled />
+                                    </el-icon>
+                                    <span>+{{ item.points || 100 }}</span>
+                                </div> -->
+                            </div>
+                        </div>
+                        <span @click="copyCodeItem(item.code)">复制</span>
+                    </div>
                 </div>
             </div>
-            <div class="flex flex-y-center grid-gap-2 mt-10 pointer" v-if="list.length > 1">
-                <el-icon color="var(--el-color-success)" :size="16">
-                    <Refresh />
-                </el-icon>
-                <span class="h9 text-success" @click="getCode">换一个</span>
+            <div v-else class="invitation-codes-section">
+                <div class="h8">您的邀请名额已用完</div>
             </div>
-            <div class="mt-10  btn-box">
-                <div class="btn" @click="close">
-                    取消
+
+            <!-- 邀请记录 -->
+            <div class="invitation-records-section">
+                <div class="records-title">邀请好友记录</div>
+                <div class="records-list" v-if="invitationRecords.length > 0">
+                    <div v-for="(record, index) in invitationRecords" :key="index" class="record-item">
+                        <div class="record-name">{{ record.useUser.nickname }}</div>
+                        <div class="record-reward">
+                            <span>+{{ record.points || WEBCONFIG?.register?.invite_reward_points }}</span>
+                        </div>
+                        <div class="record-date">{{ record.create_time }}</div>
+                    </div>
                 </div>
-                <div class="btn btn-primary" @click="copyCode">
-                    复制
+                <div v-else class="h9 text-center records-list-empty">
+                    暂未邀请好友，复制邀请码邀请好友得积分吧~
                 </div>
             </div>
-        </div>
-        <div class="flex flex-center flex-column" v-else>
-            <div class="h8">您的邀请名额已用完</div>
-            <el-button class="btn btn-primary mt-6 " color="var(--el-color-success)" size="large" @click="close">
-                确定
-            </el-button>
         </div>
     </el-dialog>
 </template>
@@ -39,50 +53,46 @@ import { $http } from '@/common/http';
 import { ResponseCode } from '@/common/const';
 import { ElMessage } from 'element-plus';
 import { useRefs, useWebConfigStore } from '@/stores';
+
 const webConfigStore = useWebConfigStore();
 const { WEBCONFIG } = useRefs(webConfigStore);
 const visible = ref(false);
 const list = ref<any>([])
+
+// 邀请码列表（模拟数据，后续可替换为真实数据）
+const invitationCodes = ref<any[]>([])
+
+// 邀请记录（模拟数据，后续可替换为真实数据）
+const invitationRecords = ref<any[]>([])
+
 const getList = () => {
     $http.get('/app/user/api/User/getUnusedInvitationCode').then((res: any) => {
         if (res.code === ResponseCode.SUCCESS) {
             list.value = res.data
-            getCode();
+            // TODO: 将接口返回的数据转换为 invitationCodes 格式
+            invitationCodes.value = res.data.map((item: any) => ({
+                code: item.code,
+                status: item.status,
+                sort:item.status === 'unused' ? 0 : 1,
+            })).sort((a: any, b: any) => a.sort - b.sort)
+            invitationRecords.value = res.data.map((item: any) => { return item.status === 'used' ? item : null }).filter(Boolean)
+            console.log(invitationRecords.value)
             visible.value = true
         }
     })
-}
-const code = ref<any>(null)
-
-const normalizeCode = (str: string) =>
-    str.replace(/\s+/g, '').slice(0, 6)
-
-const getCode = () => {
-    if (!list.value.length) return
-
-    let newCodeStr = ''
-
-    do {
-        const item = list.value[Math.floor(Math.random() * list.value.length)]
-        newCodeStr = normalizeCode(item.code)
-    } while (
-        code.value &&
-        newCodeStr === code.value.join('') &&
-        list.value.length > 1
-    )
-
-    code.value = newCodeStr.split('')
+    // TODO: 获取邀请记录
+    // getInvitationRecords()
 }
 
-const copyCode = async () => {
-    if (!Array.isArray(code.value) || !code.value.length) {
+// 复制单个邀请码
+const copyCodeItem = async (code: string) => {
+    if (!code) {
         ElMessage.warning('暂无可复制内容')
         return
     }
-    const codeStr = code.value.join('')
     // 获取当前域名并构建完整链接
     const origin = window.location.origin
-    const url = `${origin}/fastmovie/#/?code=${codeStr}`
+    const url = `${origin}/fastmovie/#/?code=${code}`
     try {
         if (navigator.clipboard && window.isSecureContext) {
             await navigator.clipboard.writeText(url)
@@ -94,7 +104,6 @@ const copyCode = async () => {
         ElMessage.error('复制失败')
     }
 }
-
 
 const fallbackCopy = (text: string) => {
     const textarea = document.createElement('textarea')
@@ -109,64 +118,191 @@ const fallbackCopy = (text: string) => {
     document.body.removeChild(textarea)
 }
 
-const close = () => {
-    visible.value = false
-}
 defineExpose({
     open: () => {
         getList()
     }
 })
 </script>
-<style scoped>
-.item {
-    width: 71px;
-    height: 71px;
-    background: #1E1E1E;
-    border-radius: 12px 12px 12px 12px;
-    border: 1px solid #272727;
-    font-size: 29px;
-    font-weight: 600;
-    color: #FFFFFF;
+<style scoped lang="scss">
+:deep(.invitation-dialog) {
+    .el-dialog__body {
+        padding: 20px;
+    }
+}
+
+.dialog-header {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    .close-icon {
+        position: absolute;
+        right: 0;
+        cursor: pointer;
+        font-size: 20px;
+        color: rgba(60, 60, 67, 0.60);
+        transition: color 0.3s;
+
+        &:hover {
+            color: rgba(60, 60, 67, 0.80);
+        }
+    }
+}
+
+.invitation-content {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+}
+
+.invitation-codes-section {
     text-align: center;
-    line-height: 71px;
-    cursor: pointer;
-    transition: all 0.3s ease;
 
-    &:hover {
-        background: #272727;
+    .h8 {
+        font-size: 14px;
+        color: rgba(255, 255, 255, 0.90);
+        line-height: 1.5;
+    }
+
+    .codes-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 12px;
+        margin-top: 20px;
+        max-height: 240px;
+        overflow-y: auto;
+    }
+
+    .code-item {
+        display: flex;
+        gap: 8px;
+        background: #1E1E1E;
+        border: 1px solid #272727;
+        padding: 16px 20px;
+        border-radius: 12px;
+        cursor: pointer;
+    }
+
+    .code-text {
+        font-size: 18px;
+        color: #FFFFFF;
+        letter-spacing: 1px;
+    }
+
+    .code-status {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+    }
+
+    .status-tag {
+        font-size: 11px;
+        padding: 4px 8px;
+        border-radius: 6px;
+        font-weight: 500;
+        display: inline-block;
+    }
+
+    .status-used {
+        background: rgba(140, 140, 140, 0.1);
+        color: #8C8C8C;
+        border: 1px solid #8C8C8C;
+    }
+
+    .status-pending {
+        background: rgba(103, 194, 58, 0.15);
+        color: var(--el-color-success);
+        border: 1px solid var(--el-color-success);
+    }
+
+    .status-reward {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        color: #FFD700;
+        font-weight: 600;
+        font-size: 14px;
+
+        .star-icon {
+            font-size: 16px;
+        }
+    }
+
+    .copy-btn {
+        width: 100%;
+        background-color: #fff;
+        color: #000;
+        border: 1px solid rgba(0, 0, 0, 0.1);
+        font-weight: 600;
+        font-size: 13px;
+        padding: 6px 0;
+        border-radius: 6px;
+        transition: all 0.3s;
+
+        &:hover {
+            background-color: #f5f5f5;
+            border-color: rgba(0, 0, 0, 0.15);
+        }
     }
 }
 
-.btn {
-    width: 100%;
-    text-align: center;
-    padding: 10px 0px;
-    border-radius: 8px;
-    background-color: #fff;
-    font-size: 20px;
-    font-weight: 600;
-    color: #000;
-    cursor: pointer;
-    transition: all 0.3s ease;
-
-    &:hover {
-        background-color: #f0f0f0;
+.invitation-records-section {
+    .records-title {
+        font-size: 16px;
+        font-weight: 600;
+        margin-bottom: 16px;
     }
-}
 
-.btn-primary {
-    background-color: var(--el-color-success);
-
-    &:hover {
-        background-color: var(--el-color-success-dark-2);
+    .records-list {
+        display: flex;
+        flex-direction: column;
+        padding: 0px 16px;
+        max-height: 200px;
+        overflow-y: auto;
     }
-}
 
-.btn-box {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    grid-gap: 10px;
-    width: 100%;
+    .records-list-empty {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 120px;
+    }
+
+    .record-item {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 10px 0;
+        color: #FFFFFF;
+
+        &:last-child {
+            border-bottom: none;
+        }
+    }
+
+
+    .record-name {
+        font-size: 14px;
+        width: 120px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        text-align: left;
+    }
+
+    .record-reward {
+        font-size: 14px;
+        color: #FFD700;
+        margin: 0 12px;
+        white-space: nowrap;
+    }
+
+    .record-date {
+        font-size: 12px;
+        color: #B5B5B5;
+        white-space: nowrap;
+    }
 }
 </style>

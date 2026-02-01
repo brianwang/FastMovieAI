@@ -7,7 +7,7 @@ const voiceForm = ref<any>({
     voice_id: '',
     voice_channel: 'yidevs',
 });
-watch(()=>voiceForm.value.voice_channel, (newVal, oldVal) => {
+watch(() => voiceForm.value.voice_channel, (newVal, oldVal) => {
     console.log(newVal, oldVal);
 });
 const voiceDialogVisible = ref(false);
@@ -44,6 +44,7 @@ const getVoiceList = () => {
             model_id: voiceForm.value.model_id,
             action: voiceForm.value.voice_channel,
             scene: modelScene.value,
+            status:'success'
         }
     }).then((res: any) => {
         if (res.code === ResponseCode.SUCCESS) {
@@ -66,7 +67,7 @@ const handlePlayAudio = (audio: any) => {
     audioElement.play();
 }
 const selectedVoice = ref<any>();
-const handlePublicVoiceItemClick = (item: any) => {
+const handleVoiceItemClick = (item: any) => {
     selectedVoice.value = item;
     voiceForm.value.voice_id = item.voice_id;
 }
@@ -86,8 +87,9 @@ defineExpose({
 </script>
 <template>
     <div class="voice-page">
-        <el-dialog v-model="voiceDialogVisible" class="generate-scene-dialog" draggable :close-on-press-escape="false" append-to-body
-            destroy-on-close :close-on-click-modal="false" :before-close="handleBeforeClose" width="min(100%,1000px)">
+        <el-dialog v-model="voiceDialogVisible" class="generate-scene-dialog" draggable :close-on-press-escape="false"
+            append-to-body destroy-on-close :close-on-click-modal="false" :before-close="handleBeforeClose"
+            width="min(100%,1000px)">
             <template #header>
                 <span class="font-weight-600">配音</span>
             </template>
@@ -101,24 +103,29 @@ defineExpose({
                         <xl-tabs-item value="yidevs" class="pb-2">公共音色</xl-tabs-item>
                         <xl-tabs-item value="self" class="pb-2">我的音色</xl-tabs-item>
                     </xl-tabs>
-                    <el-scrollbar v-loading="loading">
-                        <div class="grid-columns-3 grid-gap-4">
-                            <div class="grid-column-1 input-button rounded-4 p-4  flex flex-column grid-gap-4 actor-item actor-item-b"
-                                v-for="item in voiceList" :key="item.id" @click="handlePublicVoiceItemClick(item)"
+                    <el-scrollbar v-loading="loading" height="max(450px,50vh)">
+                        <div class="grid-columns-3 grid-gap-4" v-if="voiceList.length > 0">
+                            <div class="grid-column-1 rounded-4 p-4  flex flex-column grid-gap-4 actor-item actor-item-b"
+                                v-for="item in voiceList" :key="item.id" @click="handleVoiceItemClick(item)"
                                 :class="{ 'actor-item-selected': selectedVoice?.voice_id === item.voice_id }">
                                 <div class="w-100 flex grid-gap-2 flex-center">
                                     <el-avatar :src="item.headimg" :size="60" shape="square">
                                         {{ truncate(item.name, 1) }}
                                     </el-avatar>
                                     <div class="flex-1 flex flex-column grid-gap-2">
-                                        <span>{{ item.name }}</span>
-                                        <div class="flex grid-gap-2">
-                                            <span class="bg h10 rounded-2 py-1 px-2">{{ item.gender_enum.label }}</span>
-                                            <span class="bg h10 rounded-2 py-1 px-2">{{ item.age_enum.label }}</span>
+                                        <span v-if="item.name">{{ item.name }}</span>
+                                        <span v-else>未命名</span>
+                                        <div class="flex grid-gap-2" v-if="item.gender_enum && item.age_enum">
+                                            <span class="bg h10 rounded-2 py-1 px-2" v-if="item.gender_enum?.label">{{
+                                                item.gender_enum?.label
+                                            }}</span>
+                                            <span class="bg h10 rounded-2 py-1 px-2" v-if="item.age_enum?.label">{{
+                                                item.age_enum?.label }}</span>
                                         </div>
                                     </div>
                                 </div>
-                                <div class="flex-1 flex flex-column grid-gap-2">
+                                <div class="flex-1 flex flex-column grid-gap-2"
+                                    v-if="voiceForm.voice_channel === 'yidevs'">
                                     <span>支持语言：</span>
                                     <div class="flex grid-gap-2 flex-wrap">
                                         <span v-for="lang in item.language_enum" :key="lang.value"
@@ -141,6 +148,7 @@ defineExpose({
                                 </div>
                             </div>
                         </div>
+                        <el-empty v-else description="暂无音色数据" />
                     </el-scrollbar>
                 </div>
             </div>
@@ -155,7 +163,9 @@ defineExpose({
 <style lang="scss" scoped>
 .actor-item {
     cursor: pointer;
-    border-color: var(--el-color-info);
+    border-width: 1px;
+    border-style: solid;
+    border-color: rgba(255, 255, 255, 0.1);
 
     &:hover {
         background-color: rgba(255, 255, 255, 0.08);
@@ -165,12 +175,8 @@ defineExpose({
         background-color: rgba(255, 255, 255, 0.1);
     }
 
-    &-b {
-        border: 1px solid rgba(255, 255, 255, 0.1);
-    }
-
     &-selected {
-        border: 1px solid var(--el-color-success);
+        border-color: var(--el-color-success);
     }
 }
 

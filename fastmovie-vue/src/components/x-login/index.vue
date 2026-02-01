@@ -202,7 +202,7 @@ const loginBackgroundImageUrl = computed(() => {
                                 </el-icon>
                             </template>
                         </el-input>
-                        <el-input v-model="form.password" placeholder="请输入密码" @keyup.enter="login">
+                        <el-input type="password" v-model="form.password" placeholder="请输入密码" @keyup.enter="login">
                             <template #prepend>
                                 <el-icon size="20" color="var(--el-bg-color)">
                                     <Lock />

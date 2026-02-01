@@ -512,14 +512,6 @@ defineExpose({
     }
 }
 
-.input-button {
-    background-color: var(--el-fill-color-darker);
-    cursor: pointer;
-
-    &:hover {
-        background-color: var(--el-fill-color-dark);
-    }
-}
 
 .icon-model {
     font-size: 20px;

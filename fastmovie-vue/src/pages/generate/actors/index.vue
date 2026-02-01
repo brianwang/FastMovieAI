@@ -456,7 +456,7 @@ onUnmounted(() => {
                             </el-icon>
                             <span>添加演员</span>
                         </div>
-                        <div class="grid-column-1 input-button rounded-4 flex flex-column flex-center grid-gap-2 actor-item bg-overlay border"
+                        <div class="grid-column-1 rounded-4 flex flex-column flex-center grid-gap-2 actor-item bg-overlay border"
                             :class="{ 'border-success': item.id === currentActorForm.id }" v-for="item in actorList"
                             :key="item.id">
                             <el-avatar :src="item.headimg" class="actor-avatar bg-mosaic" fit="cover" :title="item.is_edit?item.name:'公共角色不可编辑'">
