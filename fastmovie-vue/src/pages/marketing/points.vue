@@ -3,7 +3,7 @@
         <div class="stars small" ref="smallStars"></div>
         <div class="stars big" ref="bigStars"></div>
 
-        <IconCloseSvg class="close-btn" @click="router.back()" />
+        <IconCloseSvg class="close-btn" @click="router.replace('/')" />
         <div class="h1 font-weight-bold">充值积分</div>
 
         <div class="mt-7">

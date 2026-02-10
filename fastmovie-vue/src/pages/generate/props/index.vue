@@ -247,7 +247,7 @@ const batchGenerateLength = ref(0);
 const batchGenerateList = ref<any[]>([]);
 const handleBatchGenerate = () => {
     batchGenerateDialogVisible.value = true;
-    batchGenerateList.value = propList.value.filter((item: any) => item.status === 'initializing')
+    batchGenerateList.value = propList.value.filter((item: any) => item.status_enum.value === 'initializing')
     batchGenerateLength.value = batchGenerateList.value.length
 }
 const batchPoints = usePoints([model, threeViewModel], batchGenerateLength);
@@ -549,7 +549,7 @@ onUnmounted(() => {
                 <span>上一步</span>
             </el-button>
             <el-button type="success" size="large"
-                :disabled="propList.filter((item: any) => item.status === 'initializing').length <= 0"
+                :disabled="propList.filter((item: any) => item.status_enum.value === 'initializing').length <= 0"
                 @click="handleBatchGenerate">
                 <el-icon size="16">
                     <IconBatchSvg />

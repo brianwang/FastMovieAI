@@ -29,6 +29,25 @@ class TaskController extends Basic
         $formBuilder = new FormBuilder(null, null, [
             'inline' => true
         ]);
+        $builder->addTableAction('重试', [
+            'model' => Action::COMFIRM['value'],
+            'path' => '/app/model/control/Task/retry',
+            'where' => [
+                ['retry', '=', 1]
+            ],
+            'props' => [
+                'type' => 'warning',
+                'message' => '确定要重试《{task_id}》任务吗？',
+                'confirmButtonClass' => 'el-button--danger'
+            ],
+            'component' => [
+                'name' => 'button',
+                'props' => [
+                    'type' => 'warning',
+                    'size' => 'small'
+                ]
+            ]
+        ]);
         $formBuilder->add('task_id', '任务ID', 'input', '', [
             'props' => [
                 'placeholder' => '任务ID搜索',
@@ -245,7 +264,31 @@ class TaskController extends Basic
             ->field('pmt.*,pm.name as model_name')
             ->where($where)
             ->order('pmt.id desc')
-            ->paginate($limit);
+            ->paginate($limit)->each(function ($item) {
+                $item->retry = 0;
+                if (in_array($item->status, [ModelTaskStatus::PROCESSING['value'], ModelTaskStatus::DOWNLOADING['value'], ModelTaskStatus::UPLOADING['value']]) && $item->update_time < date('Y-m-d H:i:s', strtotime('-30 minutes'))) {
+                    $item->retry = 1;
+                }
+            });
         return $this->resData($list);
+    }
+    public function retry(Request $request)
+    {
+        $id = $request->post('id');
+        $PluginModelTask = PluginModelTask::where('id', $id)->find();
+        if (!$PluginModelTask) {
+            return $this->fail('任务不存在');
+        }
+        switch ($PluginModelTask->status) {
+            case ModelTaskStatus::PROCESSING['value']:
+                $PluginModelTask->status = ModelTaskStatus::WAIT['value'];
+                break;
+            case ModelTaskStatus::DOWNLOADING['value']:
+            case ModelTaskStatus::UPLOADING['value']:
+                $PluginModelTask->status = ModelTaskStatus::WAIT_DOWNLOAD['value'];
+                break;
+        }
+        $PluginModelTask->save();
+        return $this->success('重试成功');
     }
 }

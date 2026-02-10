@@ -4,6 +4,7 @@ namespace plugin\shortplay\app\api\controller;
 
 use app\Basic;
 use app\expose\enum\State;
+use plugin\control\utils\yidevs\Exception\InvalidResultException;
 use plugin\control\utils\yidevs\Yidevs;
 use plugin\finance\expose\helper\Account;
 use plugin\finance\utils\enum\PointsBillScene;
@@ -28,6 +29,8 @@ use plugin\shortplay\app\model\PluginShortplayDramaStoryboardDialogue;
 use plugin\shortplay\app\model\PluginShortplayDramaStoryboardProp;
 use plugin\shortplay\app\model\PluginShortplayStyle;
 use plugin\model\app\model\PluginModelVoice;
+use plugin\model\utils\enum\ModelPointType;
+use plugin\shortplay\app\model\PluginShortplayProp;
 use plugin\shortplay\utils\enum\ActorAge;
 use plugin\shortplay\utils\enum\ActorGender;
 use plugin\shortplay\utils\enum\ActorSpeciesType;
@@ -35,6 +38,7 @@ use plugin\shortplay\utils\enum\ActorStatus;
 use plugin\shortplay\utils\enum\PropStatus;
 use plugin\shortplay\utils\enum\VoiceEmotion;
 use plugin\shortplay\utils\enum\VoiceLanguage;
+use plugin\shortplay\utils\PricingCalculator;
 use support\Log;
 use support\Request;
 use support\think\Db;
@@ -54,10 +58,20 @@ class GenerateController extends Basic
         if (!$PluginModel) {
             return $this->fail('模型不存在');
         }
-        $PluginShortplayDramaActor = PluginShortplayDramaActor::where(['drama_id' => $id])->order('sort asc')->with('actor')->limit(4)->select();
+        $whereOr = [];
+        $whereOr[] = ['actor.uid', '=', null];
+        $whereOr[] = ['actor.uid', '=', $request->uid];
+        $params = [];
+        $params['drama_id'] = $PluginShortplayDrama->id;
+        $PluginShortplayActor = PluginShortplayActor::actorQuery($params)->whereOr($whereOr)->order('d_actor.id', 'asc')->limit(2)->select();
         $images = [];
-        foreach ($PluginShortplayDramaActor as $item) {
-            $images[] = $item->actor->headimg;
+        foreach ($PluginShortplayActor as $item) {
+            if ($item->status == ActorStatus::GENERATED['value']) {
+                $images[] = $item->headimg;
+            }else{
+                $images=[];
+                break;
+            }
         }
         $prompts = [];
         $prompts[] = '剧名：' . $PluginShortplayDrama->title;
@@ -65,11 +79,11 @@ class GenerateController extends Basic
         $data = [
             'assistant' => $PluginModel->assistant_id,
             'model' => $PluginModel->model_id,
+            'notify_url' => 'https://' . $request->host() . '/app/model/Notify/draw',
             'form_data' => [
                 'images' => $images,
                 'prompt' => implode(";\n", $prompts) . ";\n",
                 'style' => $PluginShortplayDrama->style->prompts,
-                'notify_url' => 'https://' . $request->host() . '/app/model/Notify/draw',
                 'aspect_ratio' => '2:3'
             ]
         ];
@@ -387,7 +401,6 @@ class GenerateController extends Basic
         }
         return $this->success('生成中');
     }
-
     public function storyboard(Request $request)
     {
         $drama_id = $request->post('drama_id');
@@ -409,10 +422,15 @@ class GenerateController extends Basic
         foreach ($PluginShortplayDramaEpisode->actors as $item) {
             $actors[] = "{$item->actor->name}{{$item->actor->actor_id}}";
         }
+        $props = [];
+        $PluginShortplayProp = PluginShortplayProp::where(['episode_id' => $PluginShortplayDramaEpisode->id])->select();
+        foreach ($PluginShortplayProp as $item) {
+            $props[] = "{$item->name}{{$item->prop_id}}";
+        }
         $scene_list = [];
         $PluginShortplayDramaScene = PluginShortplayDramaScene::where(['drama_id' => $PluginShortplayDrama->id, 'episode_id' => $PluginShortplayDramaEpisode->id])->select();
         foreach ($PluginShortplayDramaScene as $item) {
-            $scene_list[] = "{$item->scene_space}·{$item->scene_location}·{$item->scene_time}·{$item->scene_weather}";
+            $scene_list[] = "{$item->scene_space}·{$item->scene_location}·{$item->scene_time}·{$item->scene_weather}{{$item->id}}";
         }
         $prompt = $PluginShortplayDramaEpisode->content;
         $NextPluginShortplayDramaEpisode = PluginShortplayDramaEpisode::where(['drama_id' => $PluginShortplayDrama->id, 'episode_no' => $PluginShortplayDramaEpisode->episode_no + 1])->find();
@@ -421,27 +439,17 @@ class GenerateController extends Basic
         } else {
             $next_episode_content = '';
         }
-        $PluginShortplayDramaStoryboard = PluginShortplayDramaStoryboard::where(['drama_id' => $PluginShortplayDrama->id, 'episode_id' => $PluginShortplayDramaEpisode->id])->order('sort asc')->find();
-        $NextPluginShortplayDramaStoryboard = PluginShortplayDramaStoryboard::where(['drama_id' => $PluginShortplayDrama->id, 'episode_id' => $PluginShortplayDramaEpisode->id, 'sort' => $PluginShortplayDramaStoryboard->sort + 1])->order('sort asc')->find();
-        if ($NextPluginShortplayDramaStoryboard) {
-            $next_description = $NextPluginShortplayDramaStoryboard->description;
-        } else {
-            $next_description = '';
+        $species_type = [];
+        foreach (ActorSpeciesType::getOptions() as $item) {
+            $species_type[] = $item['label'] . ':' . $item['value'] . '';
         }
-        $previous_dialogues = '';
-        $PreviousPluginShortplayDramaStoryboard = PluginShortplayDramaStoryboard::where(['drama_id' => $PluginShortplayDrama->id, 'episode_id' => $PluginShortplayDramaEpisode->id, 'sort' => $PluginShortplayDramaStoryboard->sort - 1])->order('sort asc')->find();
-        if ($PreviousPluginShortplayDramaStoryboard) {
-            $previous_description = $PreviousPluginShortplayDramaStoryboard->description;
-            $PreviousPluginShortplayDramaStoryboardDialogue = PluginShortplayDramaStoryboardDialogue::where(['storyboard_id' => $PreviousPluginShortplayDramaStoryboard->id])->order('sort asc')->select();
-            if ($PreviousPluginShortplayDramaStoryboardDialogue) {
-                foreach ($PreviousPluginShortplayDramaStoryboardDialogue as $item) {
-                    $previous_dialogues .= "{$item->actor->name}：{$item->content}\n";
-                }
-            } else {
-                $previous_dialogues = '';
-            }
-        } else {
-            $previous_description = '';
+        $gender = [];
+        foreach (ActorGender::getOptions() as $item) {
+            $gender[] = $item['label'] . ':' . $item['value'] . '';
+        }
+        $age = [];
+        foreach (ActorAge::getOptions() as $item) {
+            $age[] = $item['label'] . ':' . $item['value'] . '';
         }
         $task_id = uniqid('local-');
         $data = [
@@ -456,18 +464,16 @@ class GenerateController extends Basic
                 'form_data' => [
                     'prompt' => $prompt,
                     'next_episode_content' => $next_episode_content,
-                    'description' => $PluginShortplayDramaStoryboard->description,
-                    'storyboard_num' => $PluginShortplayDramaStoryboard->sort,
-                    'previous_description' => $previous_description,
-                    'previous_dialogues' => $previous_dialogues,
-                    'storyboard_sum' => PluginShortplayDramaStoryboard::where(['drama_id' => $PluginShortplayDrama->id, 'episode_id' => $PluginShortplayDramaEpisode->id])->order('sort asc')->count(),
-                    'next_description' => $next_description,
-                    // 'episode_outline' => $outline,
                     'episode_num' => $PluginShortplayDrama->episode_num,
                     'episode_duration' => $PluginShortplayDrama->episode_duration,
                     'episode_no' => $PluginShortplayDramaEpisode->episode_no,
+                    'sort' => 1,
                     'scene_list' => implode(',', $scene_list),
-                    'actors' => implode(',', $actors)
+                    'actors' => implode(',', $actors),
+                    'props' => implode(',', $props),
+                    'species_type' => implode(',', $species_type),
+                    'gender' => implode(',', $gender),
+                    'age' => implode(',', $age),
                 ]
             ]
         ];
@@ -483,10 +489,8 @@ class GenerateController extends Basic
             $PluginModelTask->status = ModelTaskStatus::WAIT['value'];
             $PluginModelTask->task_id = $task_id;
             $PluginModelTask->execution_count = 0;
-            $PluginModelTask->expectation_execution_count = PluginShortplayDramaStoryboard::where(['drama_id' => $PluginShortplayDrama->id, 'episode_id' => $PluginShortplayDramaEpisode->id])->order('sort asc')->count();
+            $PluginModelTask->expectation_execution_count = 999;
             $PluginModelTask->last_heartbeat = date('Y-m-d H:i:s', strtotime('+10 seconds'));
-            $consume_ids = Account::decPoints($request->uid, $request->channels_uid, $PluginModel->point * $PluginModelTask->expectation_execution_count, PointsBillScene::CONSUME['value'], null, '生成分镜', true);
-            $PluginModelTask->consume_ids = $consume_ids;
             $PluginModelTask->save();
             $PluginModelTaskResult = new PluginModelTaskResult();
             $PluginModelTaskResult->task_id = $PluginModelTask->id;
@@ -512,43 +516,50 @@ class GenerateController extends Basic
         if (!$PluginShortplayDramaEpisode) {
             return $this->fail('分集不存在');
         }
-        $selectData = [];
         $id = $request->post('id');
-        if (!empty($id)) {
-            $PluginShortplayDramaScene = PluginShortplayDramaScene::where(['id' => $id, 'drama_id' => $PluginShortplayDrama->id, 'episode_id' => $PluginShortplayDramaEpisode->id])->find();
-            if (!$PluginShortplayDramaScene) {
-                return $this->fail('场景不存在');
-            }
-            $title = $request->post('title');
-            if (!empty($title)) {
-                $PluginShortplayDramaScene->title = $title;
-            }
-            $scene_space = $request->post('scene_space');
-            if (!empty($scene_space)) {
-                $PluginShortplayDramaScene->scene_space = $scene_space;
-            }
-            $scene_location = $request->post('scene_location');
-            if (!empty($scene_location)) {
-                $PluginShortplayDramaScene->scene_location = $scene_location;
-            }
-            $scene_time = $request->post('scene_time');
-            if (!empty($scene_time)) {
-                $PluginShortplayDramaScene->scene_time = $scene_time;
-            }
-            $scene_weather = $request->post('scene_weather');
-            if (!empty($scene_weather)) {
-                $PluginShortplayDramaScene->scene_weather = $scene_weather;
-            }
-            $description = $request->post('description');
-            if (!empty($description)) {
-                $PluginShortplayDramaScene->description = $description;
-            }
-            $atmosphere = $request->post('atmosphere');
-            if (!empty($atmosphere)) {
-                $PluginShortplayDramaScene->atmosphere = $atmosphere;
-            }
-            $PluginShortplayDramaScene->save();
-            $item = [
+        $PluginShortplayDramaScene = PluginShortplayDramaScene::where(['id' => $id, 'drama_id' => $PluginShortplayDrama->id, 'episode_id' => $PluginShortplayDramaEpisode->id])->find();
+        if (!$PluginShortplayDramaScene) {
+            return $this->fail('场景不存在');
+        }
+        $title = $request->post('title');
+        if (!empty($title)) {
+            $PluginShortplayDramaScene->title = $title;
+        }
+        $scene_space = $request->post('scene_space');
+        if (!empty($scene_space)) {
+            $PluginShortplayDramaScene->scene_space = $scene_space;
+        }
+        $scene_location = $request->post('scene_location');
+        if (!empty($scene_location)) {
+            $PluginShortplayDramaScene->scene_location = $scene_location;
+        }
+        $scene_time = $request->post('scene_time');
+        if (!empty($scene_time)) {
+            $PluginShortplayDramaScene->scene_time = $scene_time;
+        }
+        $scene_weather = $request->post('scene_weather');
+        if (!empty($scene_weather)) {
+            $PluginShortplayDramaScene->scene_weather = $scene_weather;
+        }
+        $description = $request->post('description');
+        if (!empty($description)) {
+            $PluginShortplayDramaScene->description = $description;
+        }
+        $atmosphere = $request->post('atmosphere');
+        if (!empty($atmosphere)) {
+            $PluginShortplayDramaScene->atmosphere = $atmosphere;
+        }
+        $PluginShortplayDramaScene->save();
+        $model_id = $request->post('model_id');
+        $PluginModel = PluginModel::where(['id' => $model_id, 'scene' => ModelScene::SCENE_IMAGE['value'], 'state' => State::YES['value']])->find();
+        if (!$PluginModel) {
+            return $this->fail('模型不存在');
+        }
+        $data = [
+            'assistant' => $PluginModel->assistant_id,
+            'model' => $PluginModel->model_id,
+            'notify_url' => 'https://' . $request->host() . '/app/model/Notify/draw',
+            'form_data' => [
                 'id' => $PluginShortplayDramaScene->id,
                 'title' => $PluginShortplayDramaScene->title,
                 'scene_space' => $PluginShortplayDramaScene->scene_space,
@@ -559,99 +570,59 @@ class GenerateController extends Basic
                 'atmosphere' => $PluginShortplayDramaScene->atmosphere,
                 'style' => $PluginShortplayDrama->style->prompts,
                 'aspect_ratio' => $PluginShortplayDrama->aspect_ratio
-            ];
-            $reference_image = $request->post('reference_image');
-            if (!empty($reference_image)) {
-                $item['images'] = [$reference_image];
-            }
-            $selectData[] = $item;
-        } else {
-            $PluginShortplayDramaScene = PluginShortplayDramaScene::where(['drama_id' => $PluginShortplayDrama->id, 'episode_id' => $PluginShortplayDramaEpisode->id])->select();
-            foreach ($PluginShortplayDramaScene as $item) {
-                $state = PluginModelTask::processing(['alias_id' => $item->id, 'scene' => ModelScene::SCENE_IMAGE['value']]);
-                if ($item->image || $state > 0) {
-                    continue;
-                }
-                $selectData[] = [
-                    'id' => $item->id,
-                    'title' => $item->title,
-                    'scene_space' => $item->scene_space,
-                    'scene_location' => $item->scene_location,
-                    'scene_time' => $item->scene_time,
-                    'scene_weather' => $item->scene_weather,
-                    'description' => $item->description,
-                    'atmosphere' => $item->atmosphere,
-                    'style' => $PluginShortplayDrama->style->prompts,
-                    'aspect_ratio' => $PluginShortplayDrama->aspect_ratio
-                ];
-            }
+            ]
+        ];
+        $reference_image = $request->post('reference_image');
+        if (!empty($reference_image)) {
+            $data['form_data']['images'] = [$reference_image];
         }
-        if (empty($selectData)) {
-            return $this->fail('场景不存在');
+        Db::startTrans();
+        try {
+            $consume_ids = Account::decPoints($request->uid, $request->channels_uid, $PluginModel->point, PointsBillScene::CONSUME['value'], null, '生成场景图片', true);
+            Db::commit();
+        } catch (\Throwable $th) {
+            Db::rollback();
+            return $this->fail($th->getMessage());
         }
-        $model_id = $request->post('model_id');
-        $PluginModel = PluginModel::where(['id' => $model_id, 'scene' => ModelScene::SCENE_IMAGE['value'], 'state' => State::YES['value']])->find();
-        if (!$PluginModel) {
-            return $this->fail('模型不存在');
-        }
-        $successIds = [];
-        foreach ($selectData as $item) {
-            $data = [
-                'assistant' => $PluginModel->assistant_id,
-                'model' => $PluginModel->model_id,
-                'form_data' => array_merge($item, [
-                    'notify_url' => 'https://' . $request->host() . '/app/model/Notify/draw'
-                ])
-            ];
+        try {
+            $result = Yidevs::DrawAssistantTIGI($request->channels_uid, $data);
             Db::startTrans();
             try {
-                $consume_ids = Account::decPoints($request->uid, $request->channels_uid, $PluginModel->point, PointsBillScene::CONSUME['value'], null, '生成场景图片', true);
+                $PluginModelTask = new PluginModelTask();
+                $PluginModelTask->channels_uid = $request->channels_uid;
+                $PluginModelTask->uid = $request->uid;
+                $PluginModelTask->model_id = $model_id;
+                $PluginModelTask->model_type = ModelType::DRAW['value'];
+                $PluginModelTask->alias_id = $PluginShortplayDramaScene->id;
+                $PluginModelTask->scene = ModelScene::SCENE_IMAGE['value'];
+                $PluginModelTask->status = ModelTaskStatus::PROCESSING['value'];
+                $PluginModelTask->task_id = $result['task_id'];
+                $PluginModelTask->last_heartbeat = date('Y-m-d H:i:s');
+                $PluginModelTask->consume_ids = $consume_ids;
+                $PluginModelTask->save();
+                $PluginModelTaskResult = new PluginModelTaskResult();
+                $PluginModelTaskResult->task_id = $PluginModelTask->id;
+                $PluginModelTaskResult->channels_uid = $request->channels_uid;
+                $PluginModelTaskResult->params = $data;
+                $PluginModelTaskResult->save();
                 Db::commit();
             } catch (\Throwable $th) {
                 Db::rollback();
-                return $this->fail($th->getMessage());
+                throw $th;
             }
-            try {
-                $result = Yidevs::DrawAssistantTIGI($request->channels_uid, $data);
-                $successIds[] = $item['id'];
+        } catch (\Throwable $th) {
+            if (!empty($consume_ids)) {
                 Db::startTrans();
                 try {
-                    $PluginModelTask = new PluginModelTask();
-                    $PluginModelTask->channels_uid = $request->channels_uid;
-                    $PluginModelTask->uid = $request->uid;
-                    $PluginModelTask->model_id = $model_id;
-                    $PluginModelTask->model_type = ModelType::DRAW['value'];
-                    $PluginModelTask->alias_id = $item['id'];
-                    $PluginModelTask->scene = ModelScene::SCENE_IMAGE['value'];
-                    $PluginModelTask->status = ModelTaskStatus::PROCESSING['value'];
-                    $PluginModelTask->task_id = $result['task_id'];
-                    $PluginModelTask->last_heartbeat = date('Y-m-d H:i:s');
-                    $PluginModelTask->consume_ids = $consume_ids;
-                    $PluginModelTask->save();
-                    $PluginModelTaskResult = new PluginModelTaskResult();
-                    $PluginModelTaskResult->task_id = $PluginModelTask->id;
-                    $PluginModelTaskResult->channels_uid = $request->channels_uid;
-                    $PluginModelTaskResult->params = $data;
-                    $PluginModelTaskResult->save();
+                    Account::refund($request->uid, $request->channels_uid, $consume_ids);
                     Db::commit();
                 } catch (\Throwable $th) {
                     Db::rollback();
-                    throw $th;
                 }
-            } catch (\Throwable $th) {
-                if (!empty($consume_ids)) {
-                    Db::startTrans();
-                    try {
-                        Account::refund($request->uid, $request->channels_uid, $consume_ids);
-                        Db::commit();
-                    } catch (\Throwable $th) {
-                        Db::rollback();
-                    }
-                }
-                Log::error('GenerateSceneImage Error:' . $th->getMessage() . PHP_EOL . $th->getTraceAsString());
             }
+            Log::error('GenerateSceneImage Error:' . $th->getMessage() . PHP_EOL . $th->getTraceAsString());
         }
-        return $this->resData($successIds);
+        return $this->success();
     }
     public function storyboardImage(Request $request)
     {
@@ -667,13 +638,16 @@ class GenerateController extends Basic
         }
         $model_id = $request->post('model_id');
         $PluginModel = PluginModel::where(['id' => $model_id, 'scene' => ModelScene::STORYBOARD_IMAGE['value'], 'state' => State::YES['value']])->find();
+        if (!$PluginModel) {
+            return $this->fail('模型不存在');
+        }
         $images = [];
         $PluginShortplayDramaScene = PluginShortplayDramaScene::where(['id' => $PluginShortplayDramaStoryboard->scene_id])->find();
         if (!$PluginShortplayDramaScene) {
-            return $this->fail('分镜场景不存在');
+            return $this->fail("分镜{$PluginShortplayDramaStoryboard->sort}：场景不存在");
         }
         if (!$PluginShortplayDramaScene->image) {
-            return $this->fail('分镜场景图片不存在');
+            return $this->fail("分镜{$PluginShortplayDramaStoryboard->sort}：场景图片不存在");
         }
         $storyboards = $request->post('storyboards');
         if ($storyboards) {
@@ -684,21 +658,25 @@ class GenerateController extends Basic
         } else {
             $images[] = $PluginShortplayDramaScene->image;
         }
-        $PluginShortplayDramaStoryboardActor = PluginShortplayDramaStoryboardActor::where(['storyboard_id' => $storyboard_id])->with('actor')->select();
-        foreach ($PluginShortplayDramaStoryboardActor as $item) {
-            if ($item->actor->status != ActorStatus::GENERATED['value']) {
-                return $this->fail('演员状态异常：' . $item->actor->name);
+        $whereOr = [];
+        $whereOr[] = ['actor.uid', '=', null];
+        $whereOr[] = ['actor.uid', '=', $request->uid];
+        $params = [];
+        $params['drama_id'] = $PluginShortplayDrama->id;
+        $params['episode_id'] = $PluginShortplayDramaStoryboard->episode_id;
+        $params['storyboard_id'] = $PluginShortplayDramaStoryboard->id;
+        $PluginShortplayActor = PluginShortplayActor::actorQuery($params)->whereOr($whereOr)->order('actor.id', 'desc')->select();
+        // $PluginShortplayDramaStoryboardActor = PluginShortplayDramaStoryboardActor::where(['storyboard_id' => $storyboard_id])->with('actor')->select();
+        foreach ($PluginShortplayActor as $item) {
+            if ($item->status != ActorStatus::GENERATED['value']) {
+                return $this->fail("分镜{$PluginShortplayDramaStoryboard->sort}：演员状态异常[" . $item->name . "]");
             }
-            if ($item->character_look_id && $item->headimg) {
-                $images[] = $item->headimg;
-            } else {
-                $images[] = $item->actor->headimg;
-            }
+            $images[] = $item->headimg;
         }
         $PluginShortplayDramaStoryboardProp = PluginShortplayDramaStoryboardProp::where(['storyboard_id' => $storyboard_id])->with('prop')->select();
         foreach ($PluginShortplayDramaStoryboardProp as $item) {
             if ($item->prop->status != PropStatus::GENERATED['value']) {
-                return $this->fail('物品状态异常：' . $item->prop->name);
+                return $this->fail("分镜{$PluginShortplayDramaStoryboard->sort}：物品状态异常[" . $item->prop->name . "]");
             }
             if ($item->prop->image) {
                 $images[] = $item->prop->image;
@@ -718,11 +696,11 @@ class GenerateController extends Basic
         $data = [
             'assistant' => $PluginModel->assistant_id,
             'model' => $PluginModel->model_id,
+            'notify_url' => 'https://' . $request->host() . '/app/model/Notify/draw',
             'form_data' => [
                 'images' => $images,
                 'prompt' => $prompt,
                 'style' => $PluginShortplayDrama->style->prompts,
-                'notify_url' => 'https://' . $request->host() . '/app/model/Notify/draw',
                 'aspect_ratio' => $PluginShortplayDrama->aspect_ratio
             ]
         ];
@@ -830,6 +808,9 @@ class GenerateController extends Basic
         }
         $model_id = $request->post('model_id');
         $PluginModel = PluginModel::where(['id' => $model_id, 'scene' => ModelScene::CHARACTER_LOOK_COSTUME['value'], 'state' => State::YES['value']])->find();
+        if (!$PluginModel) {
+            return $this->fail('模型不存在');
+        }
         $images = [];
         $costume_url = $request->post('costume_url');
         $costume_reference_state = (bool)$request->post('costume_reference_state');
@@ -856,13 +837,13 @@ class GenerateController extends Basic
         $data = [
             'assistant' => $PluginModel->assistant_id,
             'model' => $PluginModel->model_id,
+            'notify_url' => 'https://' . $request->host() . '/app/model/Notify/draw',
             'form_data' => [
                 'images' => $images,
                 'hair_style' => $PluginShortplayCharacterLook->hair_style,
                 'costume' => $PluginShortplayCharacterLook->costume,
                 'style' => $style,
                 'aspect_ratio' => '1:1',
-                'notify_url' => 'https://' . $request->host() . '/app/model/Notify/draw'
             ]
         ];
         Db::startTrans();
@@ -970,6 +951,7 @@ class GenerateController extends Basic
         $data = [
             'assistant' => $PluginModel->assistant_id,
             'model'     => $PluginModel->model_id,
+            'notify_url' => 'https://' . $ids['host'] . '/app/model/Notify/draw',
             'form_data' => [
                 'prompt'     => $PluginShortplayActor->remarks,
                 'species'    => ActorSpeciesType::getText($PluginShortplayActor->species_type),
@@ -982,7 +964,6 @@ class GenerateController extends Basic
                 'costume' => $PluginShortplayCharacterLook->costume,
                 'style' => $PluginShortplayDrama->style->prompts,
                 'aspect_ratio' => '1:1',
-                'notify_url' => 'https://' . $ids['host'] . '/app/model/Notify/draw',
                 'images' => [$PluginShortplayActor->headimg, $PluginShortplayActor->three_view_image, $PluginShortplayCharacterLook->costume_url]
             ]
         ];
@@ -1040,11 +1021,11 @@ class GenerateController extends Basic
                     $data = [
                         'assistant' => $ids['three_view_assistant_id'],
                         'model'     => $ids['three_view_model_model_id'],
+                        'notify_url' => 'https://' . $ids['host'] . '/app/model/Notify/draw',
                         'form_data' => [
                             'images' => [],
                             'aspect_ratio' => '1:1',
                             'style' => $data['form_data']['style'],
-                            'notify_url' => 'https://' . $ids['host'] . '/app/model/Notify/draw'
                         ]
                     ];
                     $task = new PluginModelTask();
@@ -1137,24 +1118,31 @@ class GenerateController extends Basic
         if ($duration) {
             $PluginShortplayDramaStoryboard->duration = $duration;
         }
-        $duration = max(5, min(15, floor($PluginShortplayDramaStoryboard->duration / 1000)));
+        $duration = max(2, min(15, floor($PluginShortplayDramaStoryboard->duration / 1000)));
         $PluginShortplayDramaStoryboard->save();
         $data = [
             'assistant' => $PluginModel->assistant_id,
             'model' => $PluginModel->model_id,
+            'notify_url' => 'https://' . $request->host() . '/app/model/Notify/video',
             'form_data' => [
                 'prompt' => $prompt,
                 'negative_prompt' => $negative_prompt,
                 'first_image' => $first_image,
                 'last_image' => $last_image,
                 'duration' => $duration,
-                'notify_url' => 'https://' . $request->host() . '/app/model/Notify/video',
+                'resolution'=>'720P',
                 'aspect_ratio' => $PluginShortplayDrama->aspect_ratio
             ]
         ];
         Db::startTrans();
         try {
-            $consume_ids = Account::decPoints($request->uid, $request->channels_uid, $PluginModel->point, PointsBillScene::CONSUME['value'], null, '生成分镜视频', true);
+            if ($PluginModel->point_type == ModelPointType::TIMES['value']) {
+                $point = $PluginModel->point;
+            } else {
+                $calculator = new PricingCalculator($PluginModel->form, $data['form_data'], $PluginModel->point);
+                $point = $calculator->calculate();
+            }
+            $consume_ids = Account::decPoints($request->uid, $request->channels_uid, $point, PointsBillScene::CONSUME['value'], null, '生成分镜视频', true);
             Db::commit();
         } catch (\Throwable $th) {
             Db::rollback();
@@ -1299,6 +1287,7 @@ class GenerateController extends Basic
         $data = [
             'assistant' => $PluginModel->assistant_id,
             'model' => $PluginModel->model_id,
+            'notify_url' => 'https://' . $request->host() . '/app/model/Notify/audio',
             'form_data' => [
                 'text' => $PluginShortplayDramaStoryboardDialogue->content,
                 'voice_id' => $voice_id,
@@ -1307,7 +1296,6 @@ class GenerateController extends Basic
                 'volume' => $volume,
                 'speed' => $speed,
                 'language' => [$language],
-                'notify_url' => 'https://' . $request->host() . '/app/model/Notify/audio',
             ]
         ];
         Db::startTrans();
@@ -1420,6 +1408,7 @@ class GenerateController extends Basic
         $data = [
             'assistant' => $PluginModel->assistant_id,
             'model' => $PluginModel->model_id,
+            'notify_url' => 'https://' . $request->host() . '/app/model/Notify/audio',
             'form_data' => [
                 'text' => $PluginShortplayDramaStoryboard->narration,
                 'voice_id' => $voice_id,
@@ -1428,7 +1417,6 @@ class GenerateController extends Basic
                 'volume' => $volume,
                 'speed' => $speed,
                 'language' => [$language],
-                'notify_url' => 'https://' . $request->host() . '/app/model/Notify/audio',
             ]
         ];
         Db::startTrans();

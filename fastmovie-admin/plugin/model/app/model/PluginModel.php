@@ -7,6 +7,14 @@ use plugin\control\expose\helper\Uploads;
 use plugin\control\app\model\PluginChannelsUser;
 class PluginModel extends Basic 
 {
+    protected function getOptions(): array
+    {
+        return [
+            'type' => [
+                'form' => 'json',
+            ]
+        ];
+    }
     public function getIconAttr($value,$data)
     {
         return Uploads::url($data['channels_uid'], $value);

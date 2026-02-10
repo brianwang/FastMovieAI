@@ -263,4 +263,28 @@ class DramaController extends Basic
         }
         return $this->success('更新成功');
     }
+    public function deleteActor(Request $request)
+    {
+        $id = $request->post('id');
+        $drama_id = $request->post('drama_id');
+        $PluginShortplayDrama = PluginShortplayDrama::where(['id' => $drama_id, 'uid' => $request->uid])->find();
+        if (!$PluginShortplayDrama) {
+            return $this->fail('短剧不存在');
+        }
+        $PluginShortplayDramaActor = PluginShortplayDramaActor::where(['actor_id' => $id, 'drama_id' => $PluginShortplayDrama->id])->find();
+        if (!$PluginShortplayDramaActor) {
+            return $this->fail('演员不存在');
+        }
+        Db::startTrans();
+        try {
+            $PluginShortplayDramaActor->delete();
+            PluginShortplayDramaEpisodeActor::where(['drama_id' => $PluginShortplayDrama->id, 'actor_id' => $PluginShortplayDramaActor->actor_id])->delete();
+            PluginShortplayDramaStoryboardActor::where(['drama_id' => $PluginShortplayDrama->id, 'actor_id' => $PluginShortplayDramaActor->actor_id])->delete();
+            Db::commit();
+        } catch (\Throwable $th) {
+            Db::rollback();
+            return $this->fail($th->getMessage());
+        }
+        return $this->success('删除成功');
+    }
 }

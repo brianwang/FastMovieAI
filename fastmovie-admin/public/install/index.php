@@ -88,7 +88,7 @@ function doInstall()
     // 关闭所有错误输出，防止干扰 SSE 流
     error_reporting(0);
     ini_set('display_errors', '0');
-    
+
     session_start();
     $config = $_SESSION['install_config'] ?? [];
 
@@ -100,14 +100,14 @@ function doInstall()
     // 初始化日志文件
     $logFile = __DIR__ . '/install.log';
     @file_put_contents($logFile, ''); // 清空旧日志
-    
+
     // 定义全局日志文件路径
     define('INSTALL_LOG_FILE', $logFile);
 
     header('Content-Type: text/event-stream');
     header('Cache-Control: no-cache');
     header('X-Accel-Buffering: no');
-    
+
     // 清空输出缓冲区
     if (ob_get_level()) {
         ob_end_clean();
@@ -116,14 +116,14 @@ function doInstall()
     sendLog('info', '🚀 开始安装 FastMovie Admin...');
     sendLog('info', '安装时间：' . date('Y-m-d H:i:s'));
     sendLog('info', '');
-    
+
     // 检查目录权限
     sendLog('info', '检查目录权限...');
     $rootPath = ROOT_PATH;
     $rootPerms = substr(sprintf('%o', fileperms($rootPath)), -4);
     sendLog('info', "根目录：{$rootPath}");
     sendLog('info', "当前权限：{$rootPerms}");
-    
+
     if (!is_writable($rootPath)) {
         sendLog('error', '');
         sendLog('error', '❌ 根目录不可写！');
@@ -229,13 +229,13 @@ function doInstall()
         // 5. 生成配置文件
         sendLog('info', '[5/5] 生成配置文件...');
         $envData = generateEnv($config);
-        
+
         // 检查根目录是否可写
         $rootPath = ROOT_PATH;
         if (!is_writable($rootPath)) {
             throw new Exception("根目录不可写：{$rootPath}，请设置目录权限为 755 或 777");
         }
-        
+
         // 写入 .env 文件
         $envFile = ROOT_PATH . '.env';
         if (file_put_contents($envFile, $envData['content']) === false) {
@@ -244,19 +244,32 @@ function doInstall()
             throw new Exception("无法写入 .env 文件：{$envFile}\n错误：{$errorMsg}\n请检查目录权限（建议 755 或 777）");
         }
         sendLog('success', '✓ .env 文件创建成功');
-        
+
         // 创建 lock 文件
         $lockFile = ROOT_PATH . 'install.lock';
-        $lockContent = date('Y-m-d H:i:s') . "\n" . 
-                       "管理员：{$config['admin_user']}\n" .
-                       "数据库：{$config['db_name']}\n";
-        
+        $lockContent = date('Y-m-d H:i:s') . "\n" .
+            "管理员：{$config['admin_user']}\n" .
+            "数据库：{$config['db_name']}\n";
+
         if (file_put_contents($lockFile, $lockContent) === false) {
             $error = error_get_last();
             $errorMsg = $error ? $error['message'] : '未知错误';
             throw new Exception("无法创建 install.lock 文件：{$lockFile}\n错误：{$errorMsg}\n请检查目录权限（建议 755 或 777）");
         }
         sendLog('success', '✓ 安装锁定文件已创建');
+
+        // 创建版本文件
+        $versionFile = ROOT_PATH . 'update/VERSION';
+        if (!is_dir(dirname($versionFile))) {
+            mkdir(dirname($versionFile), 0755, true);
+        }
+        $versionContent = file_get_contents(ROOT_PATH . 'VERSION');
+        if (file_put_contents($versionFile, $versionContent) === false) {
+            $error = error_get_last();
+            $errorMsg = $error ? $error['message'] : '未知错误';
+            throw new Exception("无法创建 VERSION 文件：{$versionFile}\n错误：{$errorMsg}\n请检查目录权限（建议 755 或 777）");
+        }
+        sendLog('success', '✓ VERSION 文件创建成功');
         
         $pushKey = $envData['pushKey'];
         sendLog('success', '✓ 配置文件生成成功');
@@ -308,7 +321,7 @@ function sendLog($type, $message)
     if ($message === '' && $type !== 'info') {
         return;
     }
-    
+
     $data = ['type' => $type, 'message' => $message];
     if ($type === 'sql') {
         // 截断过长的SQL
@@ -317,7 +330,7 @@ function sendLog($type, $message)
         }
         $data['message'] = $message;
     }
-    
+
     // 输出到浏览器 - 确保格式正确
     $jsonData = json_encode($data, JSON_UNESCAPED_UNICODE);
     if ($jsonData !== false) {
@@ -327,7 +340,7 @@ function sendLog($type, $message)
         }
         flush();
     }
-    
+
     // 写入日志文件
     if (defined('INSTALL_LOG_FILE')) {
         $timestamp = date('Y-m-d H:i:s');
@@ -362,7 +375,7 @@ function generateEnv($c)
 
     // 读取 .env.example 作为模板
     $envExample = file_get_contents(ROOT_PATH . '.env.example');
-    
+
     if ($envExample === false) {
         // 如果读取失败，使用默认模板
         sendLog('info', '⚠️ 未找到 .env.example，使用默认配置');
@@ -436,14 +449,14 @@ PUSH_WSS_PORT = 37001
 function updateNginxExample($pushKey)
 {
     $nginxFile = ROOT_PATH . 'nginx.example';
-    
+
     if (!file_exists($nginxFile)) {
         sendLog('info', '⚠️ 未找到 nginx.example 文件');
         return;
     }
 
     $content = file_get_contents($nginxFile);
-    
+
     // 替换 /app/PUSH_KEY 为实际的 PUSH_KEY
     $newContent = preg_replace(
         '/location\s+\/app\/PUSH_KEY\s*\{/',
@@ -565,14 +578,15 @@ function showAlreadyInstalled()
 {
     $lockFile = '../../install.lock';
     $installTime = '';
-    
+
     if (file_exists($lockFile)) {
         $installTime = file_get_contents($lockFile);
     }
-    
-    ?>
+
+?>
     <!DOCTYPE html>
     <html>
+
     <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -588,26 +602,26 @@ function showAlreadyInstalled()
                 box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
                 text-align: center;
             }
-            
+
             .installed-icon {
                 font-size: 80px;
                 margin-bottom: 20px;
             }
-            
+
             .installed-title {
                 font-size: 28px;
                 color: #333;
                 margin-bottom: 15px;
                 font-weight: 700;
             }
-            
+
             .installed-message {
                 font-size: 16px;
                 color: #666;
                 line-height: 1.8;
                 margin-bottom: 30px;
             }
-            
+
             .installed-info {
                 background: #f6ffed;
                 border: 2px solid #52c41a;
@@ -616,7 +630,7 @@ function showAlreadyInstalled()
                 margin-bottom: 30px;
                 text-align: left;
             }
-            
+
             .installed-info h3 {
                 color: #52c41a;
                 margin: 0 0 15px 0;
@@ -625,13 +639,13 @@ function showAlreadyInstalled()
                 align-items: center;
                 gap: 8px;
             }
-            
+
             .installed-info p {
                 margin: 8px 0;
                 font-size: 14px;
                 color: #666;
             }
-            
+
             .installed-warning {
                 background: #fff7e6;
                 border: 2px solid #fa8c16;
@@ -640,7 +654,7 @@ function showAlreadyInstalled()
                 margin-bottom: 30px;
                 text-align: left;
             }
-            
+
             .installed-warning h3 {
                 color: #fa8c16;
                 margin: 0 0 15px 0;
@@ -649,14 +663,14 @@ function showAlreadyInstalled()
                 align-items: center;
                 gap: 8px;
             }
-            
+
             .installed-warning p {
                 margin: 8px 0;
                 font-size: 14px;
                 color: #666;
                 line-height: 1.8;
             }
-            
+
             .installed-warning code {
                 background: #f0f0f0;
                 padding: 2px 8px;
@@ -664,13 +678,13 @@ function showAlreadyInstalled()
                 color: #d4380d;
                 font-family: 'Consolas', monospace;
             }
-            
+
             .btn-group {
                 display: flex;
                 gap: 15px;
                 justify-content: center;
             }
-            
+
             .btn-admin {
                 padding: 12px 30px;
                 background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
@@ -684,12 +698,12 @@ function showAlreadyInstalled()
                 display: inline-block;
                 transition: transform 0.2s;
             }
-            
+
             .btn-admin:hover {
                 transform: translateY(-2px);
                 box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
             }
-            
+
             .btn-home {
                 padding: 12px 30px;
                 background: white;
@@ -703,13 +717,14 @@ function showAlreadyInstalled()
                 display: inline-block;
                 transition: all 0.2s;
             }
-            
+
             .btn-home:hover {
                 background: #667eea;
                 color: white;
             }
         </style>
     </head>
+
     <body>
         <div class="installed-container">
             <div class="installed-icon">✅</div>
@@ -718,15 +733,15 @@ function showAlreadyInstalled()
                 FastMovie Admin 已经成功安装<br>
                 请勿重复安装
             </p>
-            
+
             <?php if ($installTime): ?>
-            <div class="installed-info">
-                <h3><span>📅</span> 安装信息</h3>
-                <p><strong>安装时间：</strong><?php echo htmlspecialchars($installTime); ?></p>
-                <p><strong>后台地址：</strong>http://你的域名/admin</p>
-            </div>
+                <div class="installed-info">
+                    <h3><span>📅</span> 安装信息</h3>
+                    <p><strong>安装时间：</strong><?php echo htmlspecialchars($installTime); ?></p>
+                    <p><strong>后台地址：</strong>http://你的域名/admin</p>
+                </div>
             <?php endif; ?>
-            
+
             <div class="installed-warning">
                 <h3><span>⚠️</span> 如需重新安装</h3>
                 <p>
@@ -738,14 +753,14 @@ function showAlreadyInstalled()
                     <strong>⚠️ 警告：</strong>重新安装将清空所有数据，请谨慎操作！
                 </p>
             </div>
-            
+
             <div class="btn-group">
                 <a href="../../admin" class="btn-admin">进入后台管理</a>
                 <a href="../../" class="btn-home">返回首页</a>
             </div>
         </div>
     </body>
-    </html>
-    <?php
-}
 
+    </html>
+<?php
+}

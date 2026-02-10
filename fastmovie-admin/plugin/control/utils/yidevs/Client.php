@@ -42,18 +42,17 @@ class Client
             'proxy' => false
         ]);
     }
-    public function get(string $url, array $query = [])
+    public function request(string $method, string $url, array $options = [])
     {
         try {
             $this->client();
-            $response = $this->HttpClient->get($url, [
+            $response = $this->HttpClient->request($method, $url, array_merge([
                 'headers' => [
                     'Content-Type' => 'application/json',
                     'Accept' => 'application/json',
                     'Authorization' => 'Bearer ' . $this->token,
-                ],
-                'query' => $query,
-            ]);
+                ]
+            ], $options));
             $res = $response->getBody()->getContents();
         } catch (ClientException | RequestException $e) {
             Log::error($e->getMessage() . PHP_EOL . $e->getTraceAsString());
@@ -62,6 +61,15 @@ class Client
             Log::error($th->getMessage() . PHP_EOL . $th->getTraceAsString());
             throw new \Exception($th->getMessage());
         }
+        return $res;
+    }
+    public function stream(string $url, array $data = [], ?callable $stream = null)
+    {
+        return new StreamClient($this->token, $this->domain . '/' . $url, $data, $stream);
+    }
+    public function get(string $url, array $query = [])
+    {
+        $res = $this->request('GET', $url, ['query' => $query]);
         $result = json_decode($res, true);
         if (!isset($result['code'])) {
             throw new InvalidResultException($res);
@@ -74,26 +82,9 @@ class Client
     public function post(string $url, array $data = [], ?callable $stream = null)
     {
         if ($stream) {
-            return new StreamClient($this->token, $this->domain .'/'. $url, $data, $stream);
+            return new StreamClient($this->token, $this->domain . '/' . $url, $data, $stream);
         }
-        try {
-            $this->client();
-            $response = $this->HttpClient->post($url, [
-                'headers' => [
-                    'Content-Type' => 'application/json',
-                    'Accept' => 'application/json',
-                    'Authorization' => 'Bearer ' . $this->token,
-                ],
-                'json' => $data,
-            ]);
-            $res = $response->getBody()->getContents();
-        } catch (ClientException | RequestException $e) {
-            Log::error($e->getMessage() . PHP_EOL . $e->getTraceAsString());
-            throw new \Exception($e->getMessage());
-        } catch (\Throwable $th) {
-            Log::error($th->getMessage() . PHP_EOL . $th->getTraceAsString());
-            throw new \Exception($th->getMessage());
-        }
+        $res = $this->request('POST', $url, ['json' => $data]);
         $result = json_decode($res, true);
         if (!isset($result['code'])) {
             throw new InvalidResultException($res);

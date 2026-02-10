@@ -159,6 +159,7 @@ class PointsController extends Basic
         }
         $id = $request->get('id');
         $Style = PluginMarketingPoints::where(['id' => $id, 'channels_uid' => $request->channels_uid])->find();
+        $Style->discount =(int)$Style->discount > 0 ? 1 : 0; 
         $builder = $this->getFormBuilder();
         $builder->setData($Style->toArray());
         return $this->resData($builder);
@@ -203,6 +204,22 @@ class PointsController extends Basic
         ]);
         $builder->add('state', '状态', 'radio', State::YES['value'], [
             'options' => State::getOptions(),
+            'subProps' => [
+                'border' => true
+            ],
+            'required' => true,
+        ]);
+        $builder->add('discount', '是否优惠', 'radio', 1, [
+            'options' => [
+                [
+                    'label' => '优惠',
+                    'value' => '1'
+                ],
+                [
+                    'label' => '无',
+                    'value' => '0'
+                ]
+            ],
             'subProps' => [
                 'border' => true
             ],

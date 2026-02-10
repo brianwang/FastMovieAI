@@ -3,9 +3,13 @@
 namespace plugin\shortplay\app\api\controller;
 
 use app\Basic;
+use GuzzleHttp\Exception\ClientException;
+use GuzzleHttp\Exception\RequestException;
+use plugin\control\expose\helper\Uploads;
 use plugin\model\app\model\PluginModelTask;
 use plugin\model\utils\enum\ModelScene;
 use plugin\model\utils\enum\ModelTaskStatus;
+use plugin\notification\expose\helper\Push;
 use plugin\shortplay\app\model\PluginShortplayActor;
 use plugin\shortplay\app\model\PluginShortplayActorCharacterLook;
 use plugin\shortplay\app\model\PluginShortplayDrama;
@@ -19,8 +23,11 @@ use plugin\shortplay\app\model\PluginShortplayDramaStoryboardProp;
 use plugin\shortplay\app\model\PluginShortplayProp;
 use plugin\shortplay\utils\enum\ActorStatus;
 use plugin\shortplay\utils\enum\PropStatus;
+use support\Cache;
+use support\Log;
 use support\Request;
 use support\think\Db;
+use Workerman\Coroutine;
 
 class StoryboardController extends Basic
 {
@@ -62,7 +69,7 @@ class StoryboardController extends Basic
         if ($description) {
             $where[] = ['description', 'like', '%' . $description . '%'];
         }
-        $PluginShortplayDramaStoryboard = PluginShortplayDramaStoryboard::where($where)->with(['sceneFind',  'props','dialogues'])->order('sort asc,id asc')->select()->each(function ($item) {});
+        $PluginShortplayDramaStoryboard = PluginShortplayDramaStoryboard::where($where)->with(['sceneFind',  'props', 'dialogues'])->order('sort asc,id asc')->select()->each(function ($item) {});
         return $this->resData($PluginShortplayDramaStoryboard);
     }
     public function updateSort(Request $request)
@@ -285,6 +292,7 @@ class StoryboardController extends Basic
             $new->drama_id = $drama->id;
             $new->episode_id = $episode_id;
             $new->sort = $afterSort + 1;
+            $new->duration = 5000;
             $new->save();
 
             Db::commit();
@@ -306,7 +314,7 @@ class StoryboardController extends Basic
         $episode_id = $request->post('episode_id');
         $id = $request->post('id');
         $D = $request->post();
-        $PluginShortplayDramaStoryboard = PluginShortplayDramaStoryboard::where(['id' => $id, 'drama_id' => $drama_id, 'episode_id' => $episode_id,])->find();
+        $PluginShortplayDramaStoryboard = PluginShortplayDramaStoryboard::where(['id' => $id, 'drama_id' => $drama_id, 'episode_id' => $episode_id])->find();
         if (!$PluginShortplayDramaStoryboard) {
             return $this->fail('分镜不存在');
         }
@@ -487,7 +495,7 @@ class StoryboardController extends Basic
         if (!$PluginShortplayDramaStoryboard) {
             return $this->fail('分镜不存在');
         }
-        $PluginShortplayDrama=PluginShortplayDrama::where(['id' => $PluginShortplayDramaStoryboard->drama_id, 'uid' => $request->uid])->find();
+        $PluginShortplayDrama = PluginShortplayDrama::where(['id' => $PluginShortplayDramaStoryboard->drama_id, 'uid' => $request->uid])->find();
         if (!$PluginShortplayDrama) {
             return $this->fail('短剧不存在');
         }
@@ -539,5 +547,234 @@ class StoryboardController extends Basic
         $PluginShortplayDramaStoryboardActor->three_view_image = $PluginShortplayActorCharacterLook->three_view_image;
         $PluginShortplayDramaStoryboardActor->save();
         return $this->success('设置成功');
+    }
+    public function downloadPackage(Request $request)
+    {
+        $drama_id = $request->get('drama_id');
+        $PluginShortplayDrama = PluginShortplayDrama::where(['id' => $drama_id, 'uid' => $request->uid])->find();
+        if (!$PluginShortplayDrama) {
+            return $this->fail('短剧不存在');
+        }
+        $episode_id = $request->get('episode_id');
+        $PluginShortplayDramaEpisode = PluginShortplayDramaEpisode::where(['id' => $episode_id, 'drama_id' => $PluginShortplayDrama->id])->find();
+        if (!$PluginShortplayDramaEpisode) {
+            return $this->fail('分集不存在');
+        }
+        # 初始化打包
+        $uuid = uniqid();
+        $data = [
+            'uuid' => $uuid,
+            'uid' => $PluginShortplayDrama->uid,
+            'channels_uid' => $PluginShortplayDrama->channels_uid,
+            'drama_id' => $PluginShortplayDrama->id,
+            'episode_id' => $PluginShortplayDramaEpisode->id,
+            'url' => $request->header('x-forwarded-proto') . '://' . $request->host() . '/app/shortplay/download/storyboard?uuid=' . $uuid,
+        ];
+        Coroutine::create(function () use ($data) {
+            try {
+                sleep(2);
+                $PluginShortplayDramaStoryboards = PluginShortplayDramaStoryboard::where(['drama_id' => $data['drama_id'], 'episode_id' => $data['episode_id']])->with(['dialogues'])->order('sort', 'asc')->select();
+                $storyboardSum = count($PluginShortplayDramaStoryboards);
+                $zip = new \ZipArchive();
+                $filename = $data['drama_id'] . '_' . $data['episode_id'] . '.zip';
+                $filepath = runtime_path('temp/storyboard/');
+                if (!is_dir($filepath)) {
+                    mkdir($filepath, 0777, true);
+                }
+                if (!$zip->open($filepath . $filename, \ZipArchive::CREATE | \ZipArchive::OVERWRITE)) {
+                    throw new \Exception('打包失败');
+                }
+                $localFiles = [];
+                # 打包图片素材
+                $index = 0;
+                foreach ($PluginShortplayDramaStoryboards as $PluginShortplayDramaStoryboard) {
+                    if (!empty($PluginShortplayDramaStoryboard->image)) {
+                        $localfile = Uploads::downloadTemp($PluginShortplayDramaStoryboard->image);
+                        if (!file_exists($localfile)) {
+                            throw new \Exception('图片素材下载失败');
+                        }
+                        $localFiles[] = $localfile;
+                        $ext = pathinfo($localfile, PATHINFO_EXTENSION);
+                        $zip->addFile($localfile, $PluginShortplayDramaStoryboard->sort . '/image.' . $ext);
+                        $progress = 5 + round(($index / $storyboardSum) * 10);
+                        $index++;
+                        Push::send([
+                            'uid' => $data['uid'],
+                            'channels_uid' => $data['channels_uid'],
+                            'event' => 'downloadPackage',
+                        ], ['uuid' => $data['uuid'], 'action' => 'process', 'index' => 1, 'progress' => $progress]);
+                    }
+                }
+                # 打包视频素材
+                $index = 0;
+                foreach ($PluginShortplayDramaStoryboards as $PluginShortplayDramaStoryboard) {
+                    if (!empty($PluginShortplayDramaStoryboard->video)) {
+                        $localfile = Uploads::downloadTemp($PluginShortplayDramaStoryboard->video);
+                        if (!file_exists($localfile)) {
+                            throw new \Exception('视频素材下载失败');
+                        }
+                        $ext = pathinfo($localfile, PATHINFO_EXTENSION);
+                        $zip->addFile($localfile, $PluginShortplayDramaStoryboard->sort . '/video.' . $ext);
+                        $localFiles[] = $localfile;
+                        $progress = 15 + round(($index / $storyboardSum) * 40);
+                        $index++;
+                        Push::send([
+                            'uid' => $data['uid'],
+                            'channels_uid' => $data['channels_uid'],
+                            'event' => 'downloadPackage',
+                        ], ['uuid' => $data['uuid'], 'action' => 'process', 'index' => 2, 'progress' => $progress]);
+                    }
+                }
+                # 打包对话素材
+                $srtContent = [];
+
+                /**
+                 * 毫秒 → SRT 时间格式
+                 */
+                function msToSrtTime(int $ms): string
+                {
+                    $hours = floor($ms / 3600000);
+                    $minutes = floor(($ms % 3600000) / 60000);
+                    $seconds = floor(($ms % 60000) / 1000);
+                    $milliseconds = $ms % 1000;
+
+                    return sprintf(
+                        '%02d:%02d:%02d,%03d',
+                        $hours,
+                        $minutes,
+                        $seconds,
+                        $milliseconds
+                    );
+                }
+
+                $index = 1;                 // SRT 序号必须从 1 开始
+                $currentTimeline = 0;       // 全局时间轴（毫秒）
+
+                foreach ($PluginShortplayDramaStoryboards as $storyboard) {
+                    if (empty($storyboard->dialogues)) {
+                        continue;
+                    }
+                    $dialogueText = '';
+                    $maxEnd = 0;
+                    foreach ($storyboard->dialogues as $dialogue) {
+
+                        // 当前字幕在全局时间轴中的开始 / 结束时间
+                        $startMs = $currentTimeline + $dialogue->start_time;
+                        $endMs   = $currentTimeline + $dialogue->end_time;
+
+                        $temp =
+                            $index . "\n" .
+                            msToSrtTime($startMs) . " --> " . msToSrtTime($endMs) . "\n" .
+                            trim($dialogue->content) . "\n";
+                        $dialogueText .= $temp . "\n";
+                        $srtContent[] = $temp;
+                        $index++;
+                        $maxEnd = max($maxEnd, $endMs);
+                    }
+
+                    $currentTimeline += $maxEnd;
+                    if (!empty($dialogueText)) {
+                        $zip->addFromString($storyboard->sort . '/对话.txt', $dialogueText);
+                    }
+                }
+
+                // 最终 SRT 文本
+                $srtText = implode("\n", $srtContent);
+                $zip->addFromString('字幕.srt', $srtText);
+                Push::send([
+                    'uid' => $data['uid'],
+                    'channels_uid' => $data['channels_uid'],
+                    'event' => 'downloadPackage',
+                ], ['uuid' => $data['uuid'], 'action' => 'process', 'index' => 3, 'progress' => 55]);
+                # 打包音频素材
+                $index = 0;
+                foreach ($PluginShortplayDramaStoryboards as $PluginShortplayDramaStoryboard) {
+                    if (empty($PluginShortplayDramaStoryboard->dialogues)) {
+                        continue;
+                    }
+                    $n = 0;
+                    foreach ($PluginShortplayDramaStoryboard->dialogues as $PluginShortplayDramaStoryboardDialogue) {
+                        if (!empty($PluginShortplayDramaStoryboardDialogue->audio)) {
+                            $localfile = Uploads::downloadTemp($PluginShortplayDramaStoryboardDialogue->audio);
+                            if (!file_exists($localfile)) {
+                                throw new \Exception('音频素材下载失败');
+                            }
+                            $ext = pathinfo($localfile, PATHINFO_EXTENSION);
+                            $zip->addFile($localfile, $PluginShortplayDramaStoryboard->sort . "/{$n}-{$PluginShortplayDramaStoryboardDialogue->actor->name}." . $ext);
+                            $localFiles[] = $localfile;
+                        }
+                        $n++;
+                    }
+                    $progress = 55 + round(($index / $storyboardSum) * 10);
+                    $index++;
+                    Push::send([
+                        'uid' => $data['uid'],
+                        'channels_uid' => $data['channels_uid'],
+                        'event' => 'downloadPackage',
+                    ], ['uuid' => $data['uuid'], 'action' => 'process', 'index' => 4, 'progress' => $progress]);
+                }
+                # 打包旁白素材
+                foreach ($PluginShortplayDramaStoryboards as $PluginShortplayDramaStoryboard) {
+                    if (!empty($PluginShortplayDramaStoryboard->narration)) {
+                        $zip->addFromString($PluginShortplayDramaStoryboard->sort . '/旁白.txt', $PluginShortplayDramaStoryboard->narration);
+                    }
+                }
+                Push::send([
+                    'uid' => $data['uid'],
+                    'channels_uid' => $data['channels_uid'],
+                    'event' => 'downloadPackage',
+                ], ['uuid' => $data['uuid'], 'action' => 'process', 'index' => 5, 'progress' => 75]);
+                # 打包旁白音频素材
+                $index = 0;
+                foreach ($PluginShortplayDramaStoryboards as $PluginShortplayDramaStoryboard) {
+                    if (!empty($PluginShortplayDramaStoryboard->narration_audio)) {
+                        $localfile = Uploads::downloadTemp($PluginShortplayDramaStoryboard->narration_audio);
+                        if (!file_exists($localfile)) {
+                            throw new \Exception('旁白音频素材下载失败');
+                        }
+                        $ext = pathinfo($localfile, PATHINFO_EXTENSION);
+                        $zip->addFile($localfile, $PluginShortplayDramaStoryboard->sort . '/旁白.' . $ext);
+                        $localFiles[] = $localfile;
+                    }
+                    $progress = 75 + round(($index / $storyboardSum) * 10);
+                    $index++;
+                    Push::send([
+                        'uid' => $data['uid'],
+                        'channels_uid' => $data['channels_uid'],
+                        'event' => 'downloadPackage',
+                    ], ['uuid' => $data['uuid'], 'action' => 'process', 'index' => 6, 'progress' => $progress]);
+                }
+                Push::send([
+                    'uid' => $data['uid'],
+                    'channels_uid' => $data['channels_uid'],
+                    'event' => 'downloadPackage',
+                ], ['uuid' => $data['uuid'], 'action' => 'process', 'index' => 7, 'progress' => 95]);
+                $zip->close();
+                $cacheData = [
+                    'uuid' => $data['uuid'],
+                    'filename' => $filename,
+                    'filepath' => $filepath,
+                ];
+                Cache::set('downloadPackage_' . $data['uuid'], $cacheData, 60 * 60 * 24);
+                foreach ($localFiles as $localFile) {
+                    if (file_exists($localFile)) {
+                        unlink($localFile);
+                    }
+                }
+                Push::send([
+                    'uid' => $data['uid'],
+                    'channels_uid' => $data['channels_uid'],
+                    'event' => 'downloadPackage',
+                ], ['uuid' => $data['uuid'], 'action' => 'process', 'index' => 7, 'progress' => 100, 'url' => $data['url'], 'filename' => $filename]);
+            } catch (\Throwable | ClientException | RequestException $th) {
+                Log::error("下载打包异常：" . $th->getMessage(), $th->getTrace());
+                Push::send([
+                    'uid' => $data['uid'],
+                    'channels_uid' => $data['channels_uid'],
+                    'event' => 'downloadPackage',
+                ], ['uuid' => $data['uuid'], 'msg' => $th->getMessage()]);
+            }
+        });
+        return $this->resData(['uuid' => $uuid]);
     }
 }

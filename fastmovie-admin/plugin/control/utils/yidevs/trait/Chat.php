@@ -3,6 +3,7 @@
 namespace plugin\control\utils\yidevs\trait;
 
 use plugin\control\utils\yidevs\Client;
+
 trait Chat
 {
     /**
@@ -21,12 +22,16 @@ trait Chat
      * 调用壹定开放平台大模型-聊天-对话
      * @param int $channels_uid 分站使用$request->uid，客户端使用$request->channels_uid
      * @param array $data
-     * @return array
+     * @param callable|null $stream
+     * @return mixed
      */
-    public static function ChatCompletions(int $channels_uid, array $data = [],?callable $stream=null)
+    public static function ChatCompletions(int $channels_uid, array $data = [], ?callable $stream = null)
     {
         $Client = new Client();
         $Client->setChannelsUid($channels_uid);
-        return $Client->post('app/yimind/api/Chat/completions', $data, $stream);
+        if ($stream) {
+            return $Client->stream('app/yimind/api/Chat/completions', $data, $stream);
+        }
+        return $Client->request('POST', 'app/yimind/api/Chat/completions', ['json' => $data]);
     }
 }

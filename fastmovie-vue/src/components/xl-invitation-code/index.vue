@@ -1,70 +1,67 @@
 <template>
-    <el-dialog v-model="visible" title="邀请好友" width="586px" align-center append-to-body class="invitation-dialog">
-
-        <div class="invitation-content">
-            <!-- 邀请码列表 -->
-            <div class="invitation-codes-section" v-if="invitationCodes.length > 0">
-                <div class="h8">您还剩 {{ invitationCodes.filter((item: any) => item.status === 'unused').length }} 个邀请名额，拥有下方邀请码的任何人都可以加入</div>
-                <div class="h8 mt-3">好友成功注册可得 {{ WEBCONFIG?.register?.invite_reward_points || 0 }} 积分</div>
-                <div class="codes-grid">
-                    <div v-for="(item, index) in invitationCodes" :key="index" class="code-item">
-                        <div class="flex  flex-1 grid-gap-3">
-                            <div class="code-text">{{ item.code }}</div>
-                            <div class="code-status">
-                                <span v-if="item.status === 'used'" class="status-tag status-used">已使用</span>
-                                <span v-else class="status-tag status-pending">待使用</span>
-                                <!-- <div v-else-if="item.status === 'reward'" class="status-reward">
-                                    <el-icon class="star-icon">
-                                        <StarFilled />
-                                    </el-icon>
-                                    <span>+{{ item.points || 100 }}</span>
-                                </div> -->
-                            </div>
+    <div class="invitation-content">
+        <!-- 邀请码列表 -->
+        <div class="invitation-codes-section" v-if="invitationCodes.length > 0">
+            <div class="h8">您还剩 {{ invitationCodes.filter((item: any) => item.status === 'unused').length }} 个邀请名额，拥有下方邀请码的任何人都可以加入</div>
+            <div class="h8 mt-3">好友成功注册可得 {{ WEBCONFIG?.register?.invite_reward_points || 0 }} 积分</div>
+            <div class="codes-grid">
+                <div v-for="(item, index) in invitationCodes" :key="index" class="code-item">
+                    <div class="flex  flex-1 grid-gap-3">
+                        <div class="code-text">{{ item.code }}</div>
+                        <div class="code-status">
+                            <span v-if="item.status === 'used'" class="status-tag status-used">已使用</span>
+                            <span v-else class="status-tag status-pending">待使用</span>
+                            <!-- <div v-else-if="item.status === 'reward'" class="status-reward">
+                                <el-icon class="star-icon">
+                                    <StarFilled />
+                                </el-icon>
+                                <span>+{{ item.points || 100 }}</span>
+                            </div> -->
                         </div>
-                        <span @click="copyCodeItem(item.code)">复制</span>
                     </div>
-                </div>
-            </div>
-            <div v-else class="invitation-codes-section">
-                <div class="h8">您的邀请名额已用完</div>
-            </div>
-
-            <!-- 邀请记录 -->
-            <div class="invitation-records-section">
-                <div class="records-title">邀请好友记录</div>
-                <div class="records-list" v-if="invitationRecords.length > 0">
-                    <div v-for="(record, index) in invitationRecords" :key="index" class="record-item">
-                        <div class="record-name">{{ record.useUser.nickname }}</div>
-                        <div class="record-reward">
-                            <span>+{{ record.points || WEBCONFIG?.register?.invite_reward_points }}</span>
-                        </div>
-                        <div class="record-date">{{ record.create_time }}</div>
-                    </div>
-                </div>
-                <div v-else class="h9 text-center records-list-empty">
-                    暂未邀请好友，复制邀请码邀请好友得积分吧~
+                    <span @click="copyCodeItem(item.code)" v-if="item.status === 'unused'">复制</span>
                 </div>
             </div>
         </div>
-    </el-dialog>
+        <div v-else class="invitation-codes-section">
+            <div class="h8">您的邀请名额已用完</div>
+        </div>
+
+        <!-- 邀请记录 -->
+        <div class="invitation-records-section">
+            <div class="records-title">邀请好友记录</div>
+            <div class="records-list" v-if="invitationRecords.length > 0">
+                <div v-for="(record, index) in invitationRecords" :key="index" class="record-item">
+                    <div class="record-name">{{ record.useUser.nickname }}</div>
+                    <div class="record-reward">
+                        <span>+{{ record.points || WEBCONFIG?.register?.invite_reward_points }}</span>
+                    </div>
+                    <div class="record-date">{{ record.create_time }}</div>
+                </div>
+            </div>
+            <div v-else class="h9 text-center records-list-empty">
+                暂未邀请好友，复制邀请码邀请好友得积分吧~
+            </div>
+        </div>
+    </div>
 </template>
 <script setup lang="ts">
+import { ref, onMounted } from 'vue'
 import { $http } from '@/common/http';
 import { ResponseCode } from '@/common/const';
 import { ElMessage } from 'element-plus';
 import { useRefs, useWebConfigStore } from '@/stores';
 
+// ========== Store ==========
 const webConfigStore = useWebConfigStore();
 const { WEBCONFIG } = useRefs(webConfigStore);
-const visible = ref(false);
+
+// ========== 状态 ==========
 const list = ref<any>([])
-
-// 邀请码列表（模拟数据，后续可替换为真实数据）
 const invitationCodes = ref<any[]>([])
-
-// 邀请记录（模拟数据，后续可替换为真实数据）
 const invitationRecords = ref<any[]>([])
 
+// ========== 业务逻辑 ==========
 const getList = () => {
     $http.get('/app/user/api/User/getUnusedInvitationCode').then((res: any) => {
         if (res.code === ResponseCode.SUCCESS) {
@@ -73,18 +70,31 @@ const getList = () => {
             invitationCodes.value = res.data.map((item: any) => ({
                 code: item.code,
                 status: item.status,
-                sort:item.status === 'unused' ? 0 : 1,
+                sort: item.status === 'unused' ? 0 : 1,
             })).sort((a: any, b: any) => a.sort - b.sort)
             invitationRecords.value = res.data.map((item: any) => { return item.status === 'used' ? item : null }).filter(Boolean)
             console.log(invitationRecords.value)
-            visible.value = true
         }
     })
     // TODO: 获取邀请记录
     // getInvitationRecords()
 }
 
-// 复制单个邀请码
+// ========== 工具函数 ==========
+const fallbackCopy = (text: string) => {
+    const textarea = document.createElement('textarea')
+    textarea.value = text
+    textarea.style.position = 'fixed'
+    textarea.style.left = '-9999px'
+    textarea.style.top = '-9999px'
+    document.body.appendChild(textarea)
+    textarea.focus()
+    textarea.select()
+    document.execCommand('copy')
+    document.body.removeChild(textarea)
+}
+
+// ========== 事件处理 ==========
 const copyCodeItem = async (code: string) => {
     if (!code) {
         ElMessage.warning('暂无可复制内容')
@@ -105,56 +115,18 @@ const copyCodeItem = async (code: string) => {
     }
 }
 
-const fallbackCopy = (text: string) => {
-    const textarea = document.createElement('textarea')
-    textarea.value = text
-    textarea.style.position = 'fixed'
-    textarea.style.left = '-9999px'
-    textarea.style.top = '-9999px'
-    document.body.appendChild(textarea)
-    textarea.focus()
-    textarea.select()
-    document.execCommand('copy')
-    document.body.removeChild(textarea)
-}
-
-defineExpose({
-    open: () => {
-        getList()
-    }
+// ========== 副作用 ==========
+onMounted(() => {
+    getList()
 })
 </script>
 <style scoped lang="scss">
-:deep(.invitation-dialog) {
-    .el-dialog__body {
-        padding: 20px;
-    }
-}
-
-.dialog-header {
-    position: relative;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-
-    .close-icon {
-        position: absolute;
-        right: 0;
-        cursor: pointer;
-        font-size: 20px;
-        color: rgba(60, 60, 67, 0.60);
-        transition: color 0.3s;
-
-        &:hover {
-            color: rgba(60, 60, 67, 0.80);
-        }
-    }
-}
 
 .invitation-content {
     display: flex;
     flex-direction: column;
     gap: 24px;
+    width: calc(586px - 60px);
 }
 
 .invitation-codes-section {

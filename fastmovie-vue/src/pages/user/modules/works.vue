@@ -2,17 +2,25 @@
     <el-scrollbar height="100%" wrap-class="flex-1" @end-reached="scrollBarEndReached">
         <div v-loading="loading" class="flex-1">
             <div class="flex flex-wrap grid-gap-6" v-if="list.length > 0">
-                <div class="box flex-1" v-for="item in list" :key="item.id" @click="handleItemClick(item)">
-                    <div class="box-delete" @click.stop="handleDelete(item)">
-                        <el-icon>
-                            <Delete />
-                        </el-icon>
-                    </div>
-                    <span class="box-drama-episode ">
-                        共{{ item.episode_num }}集
-                    </span>
+                <div class="box flex-1 pointer" v-for="item in list" :key="item.id" @click="handleItemClick(item)">
+                    <template v-if="item.state">
+                        <div class="box-delete" @click.stop="handleDelete(item)">
+                            <el-icon>
+                                <Delete />
+                            </el-icon>
+                        </div>
+                        <span class="box-drama-episode ">
+                            共{{ item.episode_num }}集
+                        </span>
+                    </template>
                     <el-avatar :src="item.cover" class="box-image" shape="square">
-                        <div class="flex flex-column grid-gap-1 flex-center" v-if="item.cover_state">
+                        <div class="flex flex-column grid-gap-1 flex-center" v-if="!item.state">
+                            <el-icon size="40">
+                                <Loading class="circular" />
+                            </el-icon>
+                            <span class="h10 font-weight-600 text-success">创作中...</span>
+                        </div>
+                        <div class="flex flex-column grid-gap-1 flex-center" v-else-if="item.cover_state">
                             <el-icon size="40">
                                 <Loading class="circular" />
                             </el-icon>
@@ -25,7 +33,10 @@
                                 <DramaSvg />
                             </el-icon>
                         </div>
-                        <div class="box-content-title">
+                        <div class="box-content-title" v-if="!item.state">
+                            <span class="h8 font-weight-500 text-ellipsis-1">未命名</span>
+                        </div>
+                        <div class="box-content-title" v-else>
                             <span class="h8 font-weight-500 text-ellipsis-1">{{ item.title }}</span>
                             <span class="h9 text-secondary font-weight-500">{{ item.create_time }}</span>
                         </div>
@@ -39,15 +50,20 @@
     </el-scrollbar>
 </template>
 <script setup lang="ts">
-
+import { ref, reactive, onMounted, onUnmounted } from 'vue'
+import { ElMessageBox, ElMessage } from 'element-plus';
+import router from '@/routers';
 import DramaSvg from '@/svg/icon/drama.vue'
 import { $http } from '@/common/http';
 import { ResponseCode } from '@/common/const';
-import { useUserStore } from '@/stores';
-import { ElMessageBox, ElMessage } from 'element-plus';
-import router from '@/routers';
+import { useRefs, useUserStore } from '@/stores';
+import { usePush } from '@/composables/usePush';
 
+// ========== Store ==========
 const userStore = useUserStore();
+const { USERINFO } = useRefs(userStore);
+
+// ========== 状态 ==========
 const SearchForm = reactive({
     page: 1,
     limit: 20,
@@ -57,22 +73,45 @@ const SearchForm = reactive({
 const loading = ref(false);
 const list = ref<any[]>([]);
 const total = ref<number>(0);
+let uuids: string[] = [];
 
+// ========== Composables ==========
+const { subscribe, unsubscribeAll } = usePush();
+
+// ========== 业务逻辑 ==========
 const getList = () => {
     if (!userStore.hasLogin()) return;
     loading.value = true;
+    uuids = [];
     $http.get('/app/shortplay/api/Works/index', { params: SearchForm }).then((res: any) => {
         if (res.code === ResponseCode.SUCCESS) {
             list.value = [...list.value, ...res.data.data];
             SearchForm.page = res.data.page;
             SearchForm.limit = res.data.limit;
             total.value = res.data.total;
+            uuids = res.data.data.filter((item: any) => !item.state).map((item: any) => item.id);
         }
     }).finally(() => {
         loading.value = false;
     })
 }
 
+const addListener = () => {
+    if (userStore.hasLogin()) {
+        subscribe('private-generatecreatedrama-' + USERINFO.value?.user, (res: any) => {
+            if (uuids.includes(res.uuid)) {
+                SearchForm.page = 1;
+                list.value = [];
+                getList();
+                if (!res.drama_id) {
+                    ElMessage.error(res.msg);
+                }
+            }
+        });
+    }
+}
+
+// ========== 事件处理 ==========
 const scrollBarEndReached = () => {
     if (list.value.length >= total.value) return;
     SearchForm.page++;
@@ -98,11 +137,22 @@ const handleDelete = (item: any) => {
         });
     });
 }
+
 const handleItemClick = (item: any) => {
+    if (!item.state) {
+        return;
+    }
     router.push('/works/' + item.id);
 }
+
+// ========== 副作用 ==========
 onMounted(() => {
     getList();
+    addListener();
+})
+
+onUnmounted(() => {
+    unsubscribeAll();
 })
 </script>
 <style scoped lang="scss">
@@ -112,7 +162,6 @@ onMounted(() => {
     overflow: hidden;
     position: relative;
     min-width: 340px;
-    cursor: pointer;
     transition: all 0.3s ease;
     max-width: 340px;
 

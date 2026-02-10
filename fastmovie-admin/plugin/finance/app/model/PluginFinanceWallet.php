@@ -27,7 +27,7 @@ class PluginFinanceWallet extends Basic
         Push::send([
             'uid' => $model->uid,
             'channels_uid' => $model->channels_uid,
-            'event' => 'user',
+            'event' => 'wallet',
         ], []);
     }
 }

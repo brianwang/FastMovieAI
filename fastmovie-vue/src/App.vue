@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { useModelStore, useRefs, useStateStore, useUserStore, useWebConfigStore } from '@/stores';
+import { useModelStore, useRefs, useStateStore, useUserStore, useWebConfigStore, useWalletStore } from '@/stores';
 
 import zhCn from 'element-plus/es/locale/lang/zh-cn';
 import en from 'element-plus/es/locale/lang/en';
@@ -29,6 +29,8 @@ watch(() => STATE.value.language, (newLanguage: LanguageInterface) => {
 const userStore = useUserStore();
 userStore.userListener();
 userStore.initUserInfo();
+const walletStore = useWalletStore();
+walletStore.initWallet();
 const webConfigStore = useWebConfigStore();
 const { WEBCONFIG } = useRefs(webConfigStore);
 webConfigStore.initWebConfig();
@@ -52,6 +54,7 @@ const getUserInfo = () => {
 	return new Promise((resolve, reject) => {
 		$http.get('/app/user/api/User/info').then((res: any) => {
 			if (res.code === ResponseCode.SUCCESS) {
+				walletStore.getWallet();
 				const userStore = useUserStore();
 				userStore.setUserInfo(res.data as UserInfoInterface);
 				resolve(res.data);

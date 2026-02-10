@@ -25,7 +25,7 @@ class Enum
                         ];
                     }
                 }
-            }else{
+            } else {
                 if (is_array($value)) {
                     $options[] = $value;
                 } else {
@@ -58,12 +58,12 @@ class Enum
      * @param mixed $value 值
      * @return array|null 选项
      */
-    public static function get($value)
+    public static function get($value, $key = null)
     {
         $options = static::getOptions();
         foreach ($options as $option) {
             if ($option['value'] == $value) {
-                return $option;
+                return array_key_exists($key, $option) ? $option[$key] : $option;
             }
         }
         return null;

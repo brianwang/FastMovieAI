@@ -3,11 +3,14 @@
 namespace plugin\shortplay\app\api\controller;
 
 use app\Basic;
-use plugin\model\app\model\PluginModelTask;
-use plugin\model\utils\enum\ModelScene;
+use app\expose\enum\State;
 use plugin\shortplay\app\model\PluginShortplayDrama;
 use plugin\shortplay\app\model\PluginShortplayDramaEpisode;
+use plugin\shortplay\app\model\PluginShortplayShare;
+use plugin\shortplay\app\model\PluginShortplayShareEpisode;
+use plugin\shortplay\app\model\PluginShortplayShareLikes;
 use support\Request;
+use think\facade\Db;
 
 class WorksController extends Basic
 {
@@ -24,8 +27,7 @@ class WorksController extends Basic
         if ($script != 'all') {
             $where[] = ['script', '=', $script];
         }
-        $PluginShortplayDrama = PluginShortplayDrama::where($where)->order('id', 'desc')->paginate($limit)->each(function ($item) {
-        });
+        $PluginShortplayDrama = PluginShortplayDrama::where($where)->order('state asc ,id desc')->paginate($limit)->each(function ($item) {});
         return $this->resData($PluginShortplayDrama);
     }
     public function updateCover(Request $request)
@@ -43,7 +45,7 @@ class WorksController extends Basic
     public function details(Request $request)
     {
         $id = $request->get('id');
-        $PluginShortplayDrama = PluginShortplayDrama::where(['id' => $id, 'uid' => $request->uid])->with(['episodes','style'])->find();
+        $PluginShortplayDrama = PluginShortplayDrama::where(['id' => $id, 'uid' => $request->uid])->with(['episodes', 'style'])->find();
         if (!$PluginShortplayDrama) {
             return $this->fail('短剧不存在');
         }
@@ -69,5 +71,48 @@ class WorksController extends Basic
             return $this->fail('分集不存在');
         }
         return $this->resData($PluginShortplayDramaEpisode);
+    }
+
+    public function share(Request $request)
+    {
+        $limit = $request->get('limit', 10);
+        $where = [];
+        $where[] = ['psd.uid', '=', $request->uid];
+        $name = $request->get('name');
+        if ($name) {
+            $where[] = ['psd.name', 'like', '%' . $name . '%'];
+        }
+        $script = $request->get('script', 'all');
+        if ($script != 'all') {
+            $where[] = ['psd.script', '=', $script];
+        }
+        $PluginShortplayDrama = PluginShortplayDrama::alias('psd')
+            ->join('plugin_shortplay_share pss', 'psd.id = pss.drama_id')
+            ->where($where)
+            ->order('pss.update_time desc,pss.id desc')
+            ->field('psd.*,pss.likes,pss.id as share_id')
+            ->paginate($limit)
+            ->each(function ($item) {});
+        return $this->resData($PluginShortplayDrama);
+    }
+
+    public function deleteShare(Request $request)
+    {
+        $id = $request->post('id');
+        $PluginShortplayShare = PluginShortplayShare::where(['id' => $id, 'uid' => $request->uid])->find();
+        if (!$PluginShortplayShare) {
+            return $this->fail('分享不存在');
+        }
+        Db::startTrans();
+        try {
+            PluginShortplayShareEpisode::where(['share_id' => $PluginShortplayShare->id])->delete();
+            PluginShortplayShareLikes::where(['share_id' => $PluginShortplayShare->id])->delete();
+            $PluginShortplayShare->delete();
+            Db::commit();
+        } catch (\Throwable $th) {
+            Db::rollback();
+            return $this->fail($th->getMessage());
+        }
+        return $this->success('删除成功');
     }
 }

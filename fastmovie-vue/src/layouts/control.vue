@@ -11,7 +11,7 @@ import NoticeSvg from '@/svg/tabs/notice.vue'
 import NoticeActiveSvg from '@/svg/tabs/notice-active.vue'
 import router from '@/routers'
 import { RouteLocationNormalized } from 'vue-router'
-import { useStateStore, useRefs, useUserStore ,useWebConfigStore} from '@/stores'
+import { useStateStore, useRefs, useUserStore, useWebConfigStore } from '@/stores'
 import { useLogin } from '@/composables/useLogin'
 import XlNotice from '@/components/xl-notice/index.vue'
 import { Close } from '@element-plus/icons-vue'
@@ -190,8 +190,8 @@ onMounted(() => {
                 </li>
             </ul>
         </div>
-        <router-view />
-        <el-popover :visible="noticePopoverVisible" width="430px" placement="right-end" :show-arrow="false"
+        <div v-if="noticePopoverVisible" class="notice-popover-mask" @click="noticePopoverVisible = false"></div>
+        <el-popover :visible="noticePopoverVisible" width="430px" placement="right-end" :show-arrow="false" virtual-triggering
             trigger="click" title="消息中心" popper-style="height:90dvh;margin-top:10dvh;inset:auto auto 5dvh 88px;">
             <div class="position-relative">
                 <XlNotice ref="noticeRef" />
@@ -201,11 +201,8 @@ onMounted(() => {
                     </el-icon>
                 </div>
             </div>
-            <template #reference>
-                <div></div>
-            </template>
         </el-popover>
-
+        <router-view />
     </div>
 </template>
 <style scoped lang="scss">
@@ -357,6 +354,12 @@ onMounted(() => {
 .blur-fade-leave-from {
     opacity: 1;
     backdrop-filter: blur(8px);
+}
+
+.notice-popover-mask {
+    position: fixed;
+    inset: 0;
+    z-index: 1999;
 }
 </style>
 <style>

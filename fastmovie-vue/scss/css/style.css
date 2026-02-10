@@ -333,7 +333,7 @@ a {
       flex-wrap: wrap;
 }
 
-.x-login-message-box {
+.el-message-box.x-login-message-box {
   --el-messagebox-width: min(980px, 100%);
   --el-messagebox-height: 550px;
   --el-messagebox-padding-primary: 0px;
@@ -341,11 +341,11 @@ a {
   height: var(--el-messagebox-height);
 }
 
-.x-login-message-box .el-message-box__message {
+.el-message-box.x-login-message-box .el-message-box__message {
   width: 100%;
 }
 
-.x-login-message-box .el-message-box__btns {
+.el-message-box.x-login-message-box .el-message-box__btns {
   display: none;
 }
 
@@ -353,7 +353,7 @@ a {
   padding: 0px !important;
 }
 
-.x-loading-message-box {
+.el-message-box.x-loading-message-box {
   --el-messagebox-width: 100vw;
   --el-messagebox-height: 100vh;
   --el-messagebox-padding-primary: 0px;
@@ -361,7 +361,7 @@ a {
   height: var(--el-messagebox-height);
 }
 
-.x-loading-message-box .el-message-box__message {
+.el-message-box.x-loading-message-box .el-message-box__message {
   height: var(--el-messagebox-height);
   width: 100%;
   display: -webkit-box;
@@ -380,7 +380,7 @@ a {
   gap: 10px;
 }
 
-.x-loading-message-box .el-message-box__btns {
+.el-message-box.x-loading-message-box .el-message-box__btns {
   display: none;
 }
 
@@ -690,5 +690,9 @@ a {
 
 .input-button:hover {
   background: rgba(255, 255, 255, 0.16);
+}
+
+.el-dialog__headerbtn:focus .el-dialog__close, .el-dialog__headerbtn:hover .el-dialog__close {
+  color: var(--el-color-success) !important;
 }
 /*# sourceMappingURL=style.css.map */

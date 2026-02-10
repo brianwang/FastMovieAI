@@ -212,7 +212,7 @@ const batchGenerateLength = ref(0);
 const batchGenerateList = ref<any[]>([]);
 const handleBatchGenerate = () => {
     batchGenerateDialogVisible.value = true;
-    batchGenerateList.value = sceneList.value.filter((item: any) => !item.image)
+    batchGenerateList.value = sceneList.value.filter((item: any) => !item.image_state && !item.image)
     batchGenerateLength.value = batchGenerateList.value.length
 }
 const batchPoints = usePoints([model], batchGenerateLength);
@@ -221,9 +221,16 @@ const submitBatchGenerate = () => {
     Promise.all(batchGenerateList.value.map((item: any) => {
         return $http.post('/app/shortplay/api/Generate/sceneImage', {
             id: item.id,
+            drama_id: SceneSearch.drama_id,
+            episode_id: SceneSearch.episode_id,
             model_id: model.value.id,
         })
-    })).then(() => {
+    })).then((results: any[]) => {
+        results.forEach((result: any) => {
+            if (result.code !== ResponseCode.SUCCESS) {
+                ElMessage.error(result.msg);
+            }
+        })
         getSceneList();
     }).catch((error) => {
         console.error('submitBatchGenerate error', error);
@@ -365,8 +372,8 @@ onUnmounted(() => {
                     <span>{{ currentScene?.title }}</span>
                     <span class="text-success">场景{{ currentScene?.id }}</span>
                 </div>
-                <el-avatar :src="currentScene?.image_state ? '' : currentScene?.image" fit="contain" class="preview-image bg-mosaic"
-                    shape="square">
+                <el-avatar :src="currentScene?.image_state ? '' : currentScene?.image" fit="contain"
+                    class="preview-image bg-mosaic" shape="square">
                     <div v-if="currentScene?.image_state" class="flex flex-center flex-column grid-gap-2 text-info">
                         <el-icon size="64">
                             <Loading class="circular" />
@@ -402,7 +409,7 @@ onUnmounted(() => {
                                 :class="{ 'active': item.id === currentScene?.id }" @click="handleCurrentScene(item)">
                                 <div class="flex montage-storyboard-list-item-title grid-gap-2">
                                     <span class="h10 flex-1 text-nowrap text-ellipsis-1">场景{{ item.id }} - {{ item.title
-                                        }}</span>
+                                    }}</span>
                                     <el-popconfirm title="确定删除该分镜吗？" placement="bottom-end" confirm-button-type="danger"
                                         :teleported="false" width="fit-content" @confirm="handleDeleteScene(item)">
                                         <template #reference>
@@ -412,7 +419,8 @@ onUnmounted(() => {
                                         </template>
                                     </el-popconfirm>
                                 </div>
-                                <el-avatar class="montage-storyboard-list-item-image bg-mosaic" :src="item.image" :fit="['9:16','16:9'].includes(dramaInfo.aspect_ratio) ? 'contain' : 'cover'"
+                                <el-avatar class="montage-storyboard-list-item-image bg-mosaic" :src="item.image"
+                                    :fit="['9:16', '16:9'].includes(dramaInfo.aspect_ratio) ? 'contain' : 'cover'"
                                     v-loading="(item.image_state && item.image)" element-loading-text="图片生成中...">
                                     <div class="flex flex-column grid-gap-1 flex-center">
                                         <div class="flex">
@@ -474,7 +482,7 @@ onUnmounted(() => {
                                         <el-avatar :src="model.icon" :alt="model.name" shape="square"
                                             :size="16"></el-avatar>
                                         <span class="h10 text-ellipsis-1" style="max-width: 60px;">{{ model.name
-                                        }}</span>
+                                            }}</span>
                                         <el-icon size="16" class="pointer" @click.stop="handleModelSelect()">
                                             <Close />
                                         </el-icon>
@@ -548,7 +556,7 @@ onUnmounted(() => {
                                 <el-avatar :src="item.result.image_path" fit="contain" shape="square" :size="206">
                                 </el-avatar>
                                 <div class="flex flex-center grid-gap-2 task-item-replace pointer"
-                                    v-if="item.status==='success'&&item.result.image_path !== currentSceneForm.image"
+                                    v-if="item.status === 'success' && item.result.image_path !== currentSceneForm.image"
                                     @click="handleReplaceScene(item)">
                                     <el-icon>
                                         <Loading class="circular" v-if="replaceSceneLoading" />
@@ -572,7 +580,7 @@ onUnmounted(() => {
                 <span>上一步</span>
             </el-button>
             <el-button type="success" size="large"
-                :disabled="sceneList.filter((item: any) => item.status === 'initializing').length <= 0"
+                :disabled="sceneList.filter((item: any) => !item.image_state && !item.image).length <= 0"
                 @click="handleBatchGenerate">
                 <el-icon size="16">
                     <IconBatchSvg />

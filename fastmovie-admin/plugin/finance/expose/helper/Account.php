@@ -112,11 +112,12 @@ class Account
      * @param int $form_id 表单ID
      * @param string $remarks 备注
      * @param bool $is_accumulate 是否计入累计
+     * @param bool $is_ignore_balance 是否忽略余额
      * @throws \Exception
      * @author:1950781041@qq.com 
      * @Date:2025-12-30
      */
-    public static function decPoints($uid, $channels_uid, $amount, $scene = '', $form_id = 0, $remarks = '', $is_accumulate = true)
+    public static function decPoints($uid, $channels_uid, $amount, $scene = '', $form_id = 0, $remarks = '', $is_accumulate = true,$is_ignore_balance=false)
     {
         if ($amount <= 0) return [];
         $wallet = PluginFinanceWallet::where('uid', $uid)
@@ -126,7 +127,7 @@ class Account
         if (!$wallet) {
             throw new \Exception('钱包不存在');
         }
-        if ($wallet->points + $wallet->tmp_points < $amount) {
+        if (!$is_ignore_balance && $wallet->points + $wallet->tmp_points < $amount) {
             throw new \Exception('积分不足');
         }
         $ids = [];
@@ -212,7 +213,6 @@ class Account
             $wallet->points_used = Db::raw('points_used + ' . $points_used);
         }
         $wallet->save();
-        p('decPoints', $ids);
         return $ids;
     }
     public static function rollbackPoints($uid, $channels_uid, $ids)

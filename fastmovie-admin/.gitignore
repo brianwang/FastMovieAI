@@ -11,7 +11,7 @@
 .well-known
 *.ini
 /config/**/*.json
-
+/update/VERSION
 # Kiro IDE
 .kiro
 .vscode

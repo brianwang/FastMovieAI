@@ -60,15 +60,24 @@ class PublicController extends Basic
             'icon' => 'FullScreen',
             'tips' => trans('toolbar FullScreen', [], $domain, $lang),
         ]);
-        /* $toolbar->add(EnumAction::COMFIRM['value'], [
-            'path' => 'Public/syncSql',
-            'icon' => 'Coin',
-            'tips' => trans('同步SQL', [], $domain, $lang),
-            'props' => [
-                'message' => '检测到有SQL未同步，确定要同步SQL吗？',
-                'confirmButtonClass' => 'el-button--danger'
-            ]
-        ]); */
+        // 读取update/VERSION文件和跟目录下的VERSION文件对比
+        $updateVersionContent = file_get_contents(base_path('update/VERSION'));
+        $updateVersion = explode("\n", $updateVersionContent);
+        $updateVersion = (int)trim($updateVersion[0]);
+        $versionContent = file_get_contents(base_path('VERSION'));
+        $version = explode("\n", $versionContent);
+        $version = (int)trim($version[0]);
+        if ($updateVersion < $version) {
+            $toolbar->add(EnumAction::COMFIRM['value'], [
+                'path' => 'Public/syncSql',
+                'icon' => 'Coin',
+                'tips' => trans('同步SQL', [], $domain, $lang),
+                'props' => [
+                    'message' => '检测到有SQL未同步，确定要同步SQL吗？',
+                    'confirmButtonClass' => 'el-button--danger'
+                ]
+            ]);
+        }
         $toolbar->add(EnumAction::LINK['value'], [
             'icon' => 'House',
             'tips' => trans('toolbar House', [], $domain, $lang),
@@ -109,6 +118,10 @@ class PublicController extends Basic
                 $plugin->config($config);
             }
         }
+        $updateVersionContent = file_get_contents(base_path('update/VERSION'));
+        $updateVersionArr = explode("\n", $updateVersionContent);
+        $config->version_name = $updateVersionArr[1];
+        $config->version = $updateVersionArr[0];
         return $this->resData($config);
     }
     public function menus(Request $request)
@@ -155,5 +168,44 @@ class PublicController extends Basic
         } catch (\Throwable $th) {
             return $this->exception($th);
         }
+    }
+    public function syncSql(Request $request)
+    {
+        $updateVersionContent = file_get_contents(base_path('update/VERSION'));
+        $updateVersionArr = explode("\n", $updateVersionContent);
+        $updateVersion = (int)trim($updateVersionArr[0]);
+        $versionContent = file_get_contents(base_path('VERSION'));
+        $versionArr = explode("\n", $versionContent);
+        $version = (int)trim($versionArr[0]);
+        if ($updateVersion >= $version) {
+            return $this->fail('已是最新版本');
+        }
+        $sqlSum = 0;
+        $sqlSuccessSum = 0;
+        $sqlErrorSum = 0;
+        for ($i = $updateVersion + 1; $i <= $version; $i++) {
+            $sqlFile = glob(base_path("update/{$i}/*.sql"));
+            if (empty($sqlFile)) {
+                continue;
+            }
+            foreach ($sqlFile as $file) {
+                $sqlSum++;
+                Db::startTrans();
+                try {
+                    $sql = file_get_contents($file);
+                    $prefix = config('thinkorm.connections.mysql.prefix');
+                    $sql = str_replace('`php_', "`$prefix", $sql);
+                    $sql = str_replace('INTO php_', "INTO $prefix", $sql);
+                    Db::execute($sql);
+                    Db::commit();
+                    $sqlSuccessSum++;
+                } catch (\Throwable $th) {
+                    Db::rollback();
+                    $sqlErrorSum++;
+                }
+            }
+        }
+        file_put_contents(base_path('update/VERSION'), $versionContent);
+        return $this->success('同步SQL成功，共执行' . $sqlSum . '条SQL，成功' . $sqlSuccessSum . '条，失败' . $sqlErrorSum . '条，已更新到：' . $versionArr[1]);
     }
 }

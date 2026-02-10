@@ -31,7 +31,7 @@ const generateRef = ref();
 <template>
     <div class="control-layouts">
         <div class="control-layouts-header">
-            <div class="flex-1">
+            <div class="control-layouts-header-item">
                 <div class="control-layouts-header-logo">
                     <el-icon class="rounded-4 pointer" size="24" title="返回选集目录"
                         @click="$router.push(`/works/${dramaInfo.id}`)"
@@ -45,12 +45,12 @@ const generateRef = ref();
                     </div>
                 </div>
             </div>
-            <div class="flex-1 flex flex-center">
+            <div class="control-layouts-header-item flex flex-center">
                 <el-segmented v-model="action"
                     :options="[{ label: '剧本调整', value: 'generate-drama' }, { label: '角色演员', value: 'generate-actors' }, { label: '物品道具', value: 'generate-props' }, { label: '场景绘制', value: 'generate-scene' }, { label: '分镜画面', value: 'generate-storyboard' }]"
                     class="tabs-segmented border" />
             </div>
-            <div class="flex-1 flex flex-x-flex-end flex-y-center">
+            <div class="control-layouts-header-item flex flex-x-flex-end flex-y-center">
                 <x-header-tools :show-menu="action === 'generate-storyboard' ? ['points', 'helper'] : []" />
                 <template v-if="action === 'generate-storyboard'">
                     <el-popover placement="bottom-end" width="fit-content" popper-class="episode-popover">
@@ -75,12 +75,21 @@ const generateRef = ref();
                             <!-- <div class="p-4 hover-bg-overlay pointer rounded-4" @click="generateRef?.BatchSFX?.()"> 批量生成音效</div> -->
                         </div>
                     </el-popover>
-                    <el-button type="success" bg text @click="generateRef?.downloadPackage?.()">
-                        <el-icon>
-                            <Download />
-                        </el-icon>
-                        <span>打包下载</span>
-                    </el-button>
+                    <el-popover placement="bottom-end" width="fit-content" popper-class="episode-popover">
+                        <template #reference>
+                            <el-button type="success" bg text>
+                                <el-icon>
+                                    <Download />
+                                </el-icon>
+                                <span>打包下载</span>
+                            </el-button>
+                        </template>
+                        <div class="flex flex-column grid-gap-2">
+                            <div class="p-4 hover-bg-overlay pointer rounded-4"
+                                @click="generateRef?.downloadPackage?.()">
+                                ZIP压缩包导出</div>
+                        </div>
+                    </el-popover>
                     <el-button color="#FFFFFF" @click="generateRef?.compsite?.()">
                         <el-icon>
                             <Download />
@@ -135,6 +144,10 @@ const generateRef = ref();
                 font-weight: 500;
             }
         }
+
+        &-item {
+            flex: 1;
+        }
     }
 
     .tabs-segmented {
@@ -153,6 +166,12 @@ const generateRef = ref();
         :deep(.el-segmented__group) {
             gap: 10px;
         }
+    }
+}
+
+@media (max-width: 1830px) {
+    .control-layouts-header-item {
+        flex: auto;
     }
 }
 </style>

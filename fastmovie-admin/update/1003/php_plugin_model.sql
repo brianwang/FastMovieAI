@@ -1,0 +1,1 @@
+ALTER TABLE `php_plugin_model` ADD COLUMN `form` json NULL AFTER `description`;

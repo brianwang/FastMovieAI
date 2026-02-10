@@ -1,47 +1,49 @@
 <template>
-    <el-scrollbar height="90vh" @end-reached="handleScroll" :loading="loading">
-        <div class="flex flex-y-center grid-gap-6 p-4 rounded-4 active pointer" v-for="item in list" :key="item.id"
-            v-if="list.length > 0" @click="handleItemClick(item)">
-            <div class="flex-shrink-0 position-relative">
-                <div v-if="item.scene == 'announcement'" class="notice">
-                    <el-icon color="#000" :size="26">
-                        <BellFilled />
-                    </el-icon>
+    <div>
+        <el-scrollbar height="90vh" @end-reached="handleScroll" :loading="loading">
+            <div class="flex flex-y-center grid-gap-6 p-4 rounded-4 active pointer" v-for="item in list" :key="item.id"
+                v-if="list.length > 0" @click="handleItemClick(item)">
+                <div class="flex-shrink-0 position-relative">
+                    <div v-if="item.scene == 'announcement'" class="notice">
+                        <el-icon color="#000" :size="26">
+                            <BellFilled />
+                        </el-icon>
+                    </div>
+                    <el-avatar :size="48" src="" v-else class="flex-shrink-0" alt="" />
+                    <div class="unread" v-if="item.read_state == 0"></div>
                 </div>
-                <el-avatar :size="48" src="" v-else class="flex-shrink-0" alt="发斯蒂芬水电费" />
-                <div class="unread" v-if="item.read_state == 0"></div>
+                <div class="flex flex-column grid-gap-2">
+                    <span class="h7 font-weight-600">{{ item.title }}</span>
+                    <span class="text-ellipsis-2 text-secondary">{{ item.subtitle }}</span>
+                </div>
             </div>
-            <div class="flex flex-column grid-gap-2">
-                <span class="h7 font-weight-600">{{ item.title }}</span>
-                <span class="text-ellipsis-2 text-secondary">{{ item.subtitle }}</span>
+            <div class="flex flex-center flex-column" v-else>
+                <el-empty description="暂无消息" />
             </div>
-        </div>
-        <div class="flex flex-center flex-column" v-else>
-            <el-empty description="暂无消息" />
-        </div>
-    </el-scrollbar>
+        </el-scrollbar>
 
-    <el-dialog v-model="dialogVisible"  append-to-body title="消息详情" width="600px" :close-on-click-modal="false">
-        <div v-loading="detailLoading" class="detail-content">
-            <div v-if="detailData" class="flex flex-column grid-gap-4">
-                <div class="detail-header">
-                    <h3 class="detail-title">{{ detailData.title }}</h3>
-                    <div class="detail-meta text-secondary">
-                        <span v-if="detailData.create_time">{{ detailData.create_time }}</span>
+        <el-dialog v-model="dialogVisible" append-to-body title="消息详情" width="600px" :close-on-click-modal="false">
+            <div v-loading="detailLoading" class="detail-content">
+                <div v-if="detailData" class="flex flex-column grid-gap-4">
+                    <div class="detail-header">
+                        <h3 class="detail-title">{{ detailData.title }}</h3>
+                        <div class="detail-meta text-secondary">
+                            <span v-if="detailData.create_time">{{ detailData.create_time }}</span>
+                        </div>
+                    </div>
+                    <div class="detail-body">
+                        <div class="detail-text" v-html="detailData.content.content || detailData.subtitle"></div>
                     </div>
                 </div>
-                <div class="detail-body">
-                    <div class="detail-text" v-html="detailData.content.content || detailData.subtitle"></div>
+                <el-empty v-else description="暂无详情" />
+            </div>
+            <template #footer>
+                <div class="flex flex-center ">
+                    <el-button color="var(--el-color-success)" @click="dialogVisible = false">我知道了</el-button>
                 </div>
-            </div>
-            <el-empty v-else description="暂无详情" />
-        </div>
-        <template #footer>
-            <div class="flex flex-center ">
-                <el-button color="var(--el-color-success)" @click="dialogVisible = false">我知道了</el-button>
-            </div>
-        </template>
-    </el-dialog>
+            </template>
+        </el-dialog>
+    </div>
 </template>
 <script setup lang="ts">
 import { $http } from '@/common/http'

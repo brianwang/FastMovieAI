@@ -110,8 +110,6 @@ class PluginUser extends Basic
         if ($model->mobile && $model->realname) {
             $User->permissions[] = UserPermission::BUY['value'];
         }
-        $wallet = PluginFinanceWallet::where(['uid' => $model->id])->find();
-        $User->wallet = $wallet;
         $pluginConfig = glob(base_path("plugin/*/api/{$request->app}/PublicController.php"));
         foreach ($pluginConfig as $path) {
             $plugin_name = basename(dirname(dirname(dirname($path))));

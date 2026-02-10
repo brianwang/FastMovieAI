@@ -69,7 +69,7 @@ onMounted(() => {
                             <el-icon size="16">
                                 <IconPointsSvg />
                             </el-icon>
-                            <span class="h10" v-if="item.point">{{ item.point }}点/次</span>
+                            <span class="h10" v-if="item.point">{{ item.point }}点/{{ item.unit }}</span>
                             <span class="h10" v-else>免费</span>
                         </div>
                     </div>

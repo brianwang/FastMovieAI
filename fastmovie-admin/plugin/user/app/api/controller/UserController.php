@@ -410,6 +410,15 @@ class UserController extends Basic
         return $this->success('修改成功');
     }
 
+    public function wallet(Request $request)
+    {
+        $wallet = PluginFinanceWallet::where(['uid' => $request->uid])->find();
+        if (!$wallet) {
+            return $this->fail('钱包不存在');
+        }
+        return $this->resData($wallet);
+    }
+
     /**
      * 验证邀请码是否被使用
      * @author:1950781041@qq.com 

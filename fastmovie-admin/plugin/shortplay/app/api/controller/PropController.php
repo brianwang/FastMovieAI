@@ -181,10 +181,10 @@ class PropController extends Basic
                 $data = [
                     'assistant' => $ImagePluginModel->assistant_id,
                     'model'     => $ImagePluginModel->model_id,
+                    'notify_url' => 'https://' . $request->host() . '/app/model/Notify/draw',
                     'form_data' => [
                         'prompt'     => $PluginShortplayProp->description,
                         'aspect_ratio' => '1:1',
-                        'notify_url' => 'https://' . $request->host() . '/app/model/Notify/draw'
                     ]
                 ];
                 if ($image_reference_state) {
@@ -192,7 +192,7 @@ class PropController extends Basic
                 }
                 Db::startTrans();
                 try {
-                    $consume_ids = Account::decPoints($request->uid, $request->channels_uid, $ImagePluginModel->point, PointsBillScene::CONSUME['value'],null,'生成物品图片', true);
+                    $consume_ids = Account::decPoints($request->uid, $request->channels_uid, $ImagePluginModel->point, PointsBillScene::CONSUME['value'], null, '生成物品图片', true);
                     Db::commit();
                 } catch (\Throwable $th) {
                     Db::rollback();
@@ -252,10 +252,10 @@ class PropController extends Basic
                 $data = [
                     'assistant' => $ThreeViewPluginModel->assistant_id,
                     'model'     => $ThreeViewPluginModel->model_id,
+                    'notify_url' => 'https://' . $request->host() . '/app/model/Notify/draw',
                     'form_data' => [
                         'prompt'     => $PluginShortplayProp->description,
                         'aspect_ratio' => '1:1',
-                        'notify_url' => 'https://' . $request->host() . '/app/model/Notify/draw'
                     ]
                 ];
 
@@ -269,7 +269,7 @@ class PropController extends Basic
 
                 Db::startTrans();
                 try {
-                    $consume_ids = Account::decPoints($request->uid, $request->channels_uid, $ThreeViewPluginModel->point, PointsBillScene::CONSUME['value'],null,'生成物品三视图', true);
+                    $consume_ids = Account::decPoints($request->uid, $request->channels_uid, $ThreeViewPluginModel->point, PointsBillScene::CONSUME['value'], null, '生成物品三视图', true);
                     Db::commit();
                 } catch (\Throwable $th) {
                     Db::rollback();

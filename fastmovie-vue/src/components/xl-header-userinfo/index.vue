@@ -1,16 +1,20 @@
 <script setup lang="ts">
 import { truncate } from '@/common/functions';
 import { useLogin } from '@/composables/useLogin';
-import { useRefs, useUserStore } from '@/stores';
+import { useRefs, useUserStore, useWalletStore } from '@/stores';
 // import LanguageSvg from '@/svg/icon/language.vue';
 import router from '@/routers';
+import { useInvitationCode } from '@/composables/useInvitationCode';
+const useInvitationCodeBox = useInvitationCode();
 
 const login = useLogin();
 const userStore = useUserStore();
 const { USERINFO } = useRefs(userStore);
+const walletStore = useWalletStore();
+const { WALLET } = useRefs(walletStore);
 const xlUserinfoRef = ref<any>(null);
 const userinfoPopoverRef = ref<any>(null);
-const xlInvitationCodeRef = ref<any>(null);
+// const xlInvitationCodeRef = ref<any>(null);
 </script>
 <template>
     <el-popover placement="bottom" ref="userinfoPopoverRef" :width="320" trigger="click"
@@ -34,7 +38,7 @@ const xlInvitationCodeRef = ref<any>(null);
                 <div class="h8">我的积分</div>
                 <div class="grid grid-columns-3 mt-7">
                     <div class="flex flex-column flex-center grid-gap-3">
-                        <span class="h7 font-weight-bold">{{ USERINFO?.wallet?.points }}</span>
+                        <span class="h7 font-weight-bold">{{ WALLET?.points }}</span>
                         <span class="h9 text-secondary">会员积分</span>
                     </div>
                     <div class="flex flex-column flex-center grid-gap-3">
@@ -42,13 +46,13 @@ const xlInvitationCodeRef = ref<any>(null);
                         <span class="h9 text-secondary">每周积分</span>
                     </div>
                     <div class="flex flex-column flex-center grid-gap-3">
-                        <span class="h7 font-weight-bold">{{ USERINFO?.wallet?.tmp_points }}</span>
+                        <span class="h7 font-weight-bold">{{ WALLET?.tmp_points }}</span>
                         <span class="h9 text-secondary">奖励积分</span>
                     </div>
                 </div>
                 <el-divider />
                 <div class="flex flex-y-center grid-gap-2 pointer"
-                    @click="userinfoPopoverRef.hide(); xlInvitationCodeRef.open()">
+                    @click="userinfoPopoverRef.hide(); useInvitationCodeBox.open()">
                     <el-icon color="#fff" size="20">
                         <Present />
                     </el-icon>
@@ -82,7 +86,6 @@ const xlInvitationCodeRef = ref<any>(null);
         </div>
     </div>
     <xl-userinfo ref="xlUserinfoRef" />
-    <xl-invitation-code ref="xlInvitationCodeRef" />
 </template>
 
 <style scoped lang="scss">

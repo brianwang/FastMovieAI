@@ -57,6 +57,10 @@ class VoiceController extends Basic
             $media->save($wav, $temp_path);
             $file = new UploadFile($temp_path, $fileName, 'audio/wav', $file->getUploadErrorCode());
         }
+        if ($file->getSize() > 1024 * 1024 * 10) {
+            unlink($temp_path);
+            return $this->fail('语音文件大小不能超过10MB,请重新录制');
+        }
         $result = Uploads::upload($request->channels_uid, $file, null, 'uploads/voice_audio');
         if (file_exists($temp_path)) {
             unlink($temp_path);
@@ -86,9 +90,9 @@ class VoiceController extends Basic
         ];
         $data = [
             'model' => $PluginModel->model_id,
+            'notify_url' => 'https://' . $request->host() . '/app/model/Notify/voiceClone',
             'form_data' => [
                 'audio' => $audio_url,
-                'notify_url' => 'https://' . $request->host() . '/app/model/Notify/voiceClone',
             ]
         ];
         Coroutine::create(function () use ($ids, $data) {

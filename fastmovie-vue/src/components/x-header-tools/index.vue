@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import HelperSvg from '@/svg/icon/helper.vue';
-import { useUserStore, useRefs, useWebConfigStore } from '@/stores';
+import { useUserStore, useRefs, useWebConfigStore, useWalletStore } from '@/stores';
 import { useNotify } from '@/composables/useNotify';
 import IconEmailSvg from '@/svg/icon/icon-email.vue';
 import IconPointsSvg from '@/svg/icon/icon-points.vue';
@@ -12,7 +12,9 @@ import { $http } from '@/common/http';
 import { ResponseCode } from '@/common/const';
 import IconVipSvg from '@/svg/icon/icon-vip.vue';
 import { useLogin } from '@/composables/useLogin'
+import { useInvitationCode } from '@/composables/useInvitationCode';
 const login = useLogin()
+const useInvitationCodeBox = useInvitationCode();
 const props = withDefaults(defineProps<{
     showMenu?: any[]
 }>(), {
@@ -25,6 +27,8 @@ const userStore = useUserStore();
 const { USERINFO } = useRefs(userStore);
 const webConfigStore = useWebConfigStore();
 const { WEBCONFIG } = useRefs(webConfigStore);
+const walletStore = useWalletStore();
+const { WALLET } = useRefs(walletStore);
 const notify = useNotify();
 const { subscribe, unsubscribe, unsubscribeAll } = usePush();
 const wechatGroupDialogVisible = ref(false);
@@ -37,6 +41,9 @@ const getUserInfo = throttle(() => {
     }).catch(() => {
     });
 }, 1000);
+const getWallet = throttle(() => {
+    walletStore.getWallet();
+}, 1000);
 const addListener = () => {
     if (userStore.hasLogin()) {
         subscribe('private-notify-' + USERINFO.value?.user, (res: any) => {
@@ -44,6 +51,9 @@ const addListener = () => {
         });
         subscribe('private-user-' + USERINFO.value?.user, () => {
             getUserInfo();
+        });
+        subscribe('private-wallet-' + USERINFO.value?.user, () => {
+            getWallet();
         });
     }
     subscribe('notify', (res: any) => {
@@ -57,7 +67,7 @@ watch(USERINFO, (newVal, oldVal) => {
     }
     addListener();
 });
-const xlInvitationCodeRef = ref<any>(null);
+// const xlInvitationCodeRef = ref<any>(null);
 const xlUserPointsRef = ref<any>(null);
 
 // 打开微信群二维码对话框
@@ -91,17 +101,17 @@ onUnmounted(() => {
 </script>
 <template>
     <div class="flex flex-y-center flex-x-flex-end grid-gap-4 x-header-tools">
-        <div class="btn h10" @click="xlInvitationCodeRef.open" v-if="USERINFO && showMenu?.includes('invitation')">
+        <div class="btn h10" @click="useInvitationCodeBox.open" v-if="USERINFO && showMenu?.includes('invitation')">
             <el-icon :size="16">
                 <IconEmailSvg />
             </el-icon>
-            <span class="h10">邀请好友得积分</span>
+            <span class="h10 ">邀请好友得积分</span>
         </div>
         <div class="btn h10" @click="xlUserPointsRef.open" v-if="USERINFO && showMenu?.includes('points')">
             <el-icon :size="16">
                 <IconPointsSvg />
             </el-icon>
-            <span>{{ USERINFO.wallet?.available_points || 0 }}</span>
+            <span>{{ WALLET?.available_points || 0 }}</span>
             <el-divider direction="vertical" />
             <span class="h10" @click.stop="$router.push('/points')">充值</span>
         </div>
@@ -121,7 +131,6 @@ onUnmounted(() => {
             </el-icon>
         </div>
         <xl-header-userinfo v-if="showMenu?.includes('userinfo')" />
-        <xl-invitation-code ref="xlInvitationCodeRef" />
         <xl-user-points ref="xlUserPointsRef" />
     </div>
 
@@ -148,6 +157,7 @@ onUnmounted(() => {
         align-items: center;
         justify-content: center;
         gap: 2px;
+        flex-shrink: 0;
         cursor: pointer;
 
         &:hover {

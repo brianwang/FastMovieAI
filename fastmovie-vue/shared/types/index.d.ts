@@ -27,6 +27,20 @@ declare global {
         copyright?: string,
         [propName: string]: any
     }
+    interface WalletInterface {
+        uid: string,
+        channels_uid: number,
+        balance: number,
+        balance_sum: number,
+        balance_used: number,
+        points: number,
+        points_sum: number,
+        points_used: number,
+        tmp_points: number,
+        tmp_points_sum: number,
+        tmp_points_used: number,
+        available_points: number
+    }
     interface StateInterface {
         AsideState: boolean
         NotMenusAsideState: boolean

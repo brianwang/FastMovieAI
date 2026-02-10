@@ -1,6 +1,11 @@
 import { ElMessageBox, ElMessageBoxOptions } from "element-plus";
 import XLLoading from "@/components/xl-loading/index.vue";
-export const useLoading = (props: any) => {
+interface LoadingInstance {
+    open: () => Promise<boolean>;
+    close: () => void;
+    xlLoadingRef: Ref<any>;
+}
+export const useLoading = (props: any): LoadingInstance => {
     const xlLoadingRef = ref<any>(null);
     const options: ElMessageBoxOptions = {
         showClose: false,

@@ -103,8 +103,8 @@ const { subscribe, unsubscribeAll } = usePush();
 let uuids: string[] = [];
 const addListener = () => {
 	if (userStore.hasLogin()) {
-		subscribe('private-clonevoice-' + USERINFO.value?.user, (res: any) => {
-			if (uuids.includes(res.id)) {
+		subscribe('private-generatecreatedrama-' + USERINFO.value?.user, (res: any) => {
+			if (uuids.includes(res.uuid)) {
 				xlLoading.close();
 				if (res.drama_id) {
 					ElMessage.success(res.msg);
@@ -332,7 +332,7 @@ onUnmounted(() => {
 		</el-segmented>
 		<div class="input-box" v-loading="loading">
 			<div class="rounded-4 p-4 input-bg">
-				<el-mention ref="mentionRef" v-model="form.prompt" :autosize="{ minRows: 6, maxRows: 50 }"
+				<el-mention ref="mentionRef" v-model="form.prompt" :autosize="{ minRows: 6, maxRows: 10 }"
 					popper-class="prompt-popper" type="textarea" :prefix="mentionPrefix"
 					placeholder="请输入剧本创作提示词，@演员名称可以引用演员，#物品名称可以引用物品，Shift + Enter换行，Enter提交" :options="options"
 					:loading="loading" whole :check-is-whole="checkIsWhole" @search="handleSearch"

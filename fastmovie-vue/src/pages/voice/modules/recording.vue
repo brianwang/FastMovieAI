@@ -70,6 +70,7 @@
 </template>
 
 <script setup lang="ts">
+import router from '@/routers'
 import IconPause from '@/svg/icon/icon-pause.vue'
 import IconPlay1 from '@/svg/icon/icon-play-1.vue'
 import { Microphone, RefreshRight } from '@element-plus/icons-vue'
@@ -296,8 +297,7 @@ const handleConfirm = () => {
 
 // 显示协议
 const showProtocol = () => {
-    // TODO: 打开协议弹窗或跳转到协议页面
-    ElMessage.info('协议功能待实现')
+    router.push('/article/cloning')
 }
 
 // 组件卸载时清理资源

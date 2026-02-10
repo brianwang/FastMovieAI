@@ -116,6 +116,10 @@ class PublicController extends Basic
                 $plugin->config($config);
             }
         }
+        $updateVersionContent = file_get_contents(base_path('update/VERSION'));
+        $updateVersionArr = explode("\n", $updateVersionContent);
+        $config->version_name=$updateVersionArr[1];
+        $config->version=$updateVersionArr[0];
         return $this->resData($config);
     }
     public function menus(Request $request)

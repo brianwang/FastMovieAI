@@ -112,10 +112,14 @@ class Submit
                                             $PluginShortplayDramaEpisodeActor->save();
                                         }
                                     }
+                                    $updateActors = [];
                                     if (!empty($result['create_actor'])) {
                                         foreach ($result['create_actor'] as $actor) {
                                             $PluginShortplayActor = PluginShortplayActor::where(['name' => $actor['name'], 'channels_uid' => $data['channels_uid'], 'drama_id' => $PluginShortplayDrama->id])->field('id,actor_id')->find();
                                             if (!$PluginShortplayActor) {
+                                                if (empty($actor['description'])) {
+                                                    continue;
+                                                }
                                                 $PluginShortplayActor = new PluginShortplayActor();
                                                 $PluginShortplayActor->channels_uid = $data['channels_uid'];
                                                 $PluginShortplayActor->drama_id = $PluginShortplayDrama->id;
@@ -129,6 +133,7 @@ class Submit
                                                 $PluginShortplayActor->remarks = $actor['description'];
                                                 $PluginShortplayActor->status = ActorStatus::INITIALIZING['value'];
                                                 $PluginShortplayActor->save();
+                                                $updateActors[] = "{$PluginShortplayActor->name}{{$PluginShortplayActor->actor_id}}";
                                             }
                                             $PluginShortplayDramaActor = new PluginShortplayDramaActor();
                                             $PluginShortplayDramaActor->channels_uid = $data['channels_uid'];
@@ -157,12 +162,9 @@ class Submit
                                         $PluginModelTask->success_execution_count = Db::raw('success_execution_count + 1');
                                         $PluginModelTask->last_heartbeat = date('Y-m-d H:i:s', strtotime('+10 seconds'));
                                         $data['params']['form_data']['pre_episode'] = $result['content'];
-                                        $PluginShortplayDramaActor = PluginShortplayDramaActor::where('drama_id', $PluginShortplayDrama->id)->with('actor')->select();
-                                        $actors = [];
-                                        foreach ($PluginShortplayDramaActor as $PluginShortplayActor) {
-                                            $actors[] = "{$PluginShortplayActor->actor->name}{{$PluginShortplayActor->actor->actor_id}}";
+                                        if (!empty($updateActors)) {
+                                            $data['params']['form_data']['actors'] .= "," . implode(',', $updateActors);
                                         }
-                                        $data['params']['form_data']['actors'] = implode(',', $actors);
                                         $PluginModelTask->result->params = $data;
                                         $PluginModelTask->together(['result'])->save();
                                     }
@@ -217,7 +219,18 @@ class Submit
                                 Db::startTrans();
                                 try {
                                     $previous_dialogues = '';
-                                    $PluginShortplayDramaStoryboard = PluginShortplayDramaStoryboard::where(['drama_id' => $data['drama_id'], 'episode_id' => $data['episode_id'], 'sort' => $data['params']['form_data']['storyboard_num']])->order('sort asc')->find();
+                                    $whereOr = [];
+                                    $whereOr[] = ['uid', '=', null];
+                                    $whereOr[] = ['uid', '=', $data['uid']];
+                                    $PluginShortplayDrama = PluginShortplayDrama::where(['id' => $data['drama_id']])->find();
+                                    $sort = PluginShortplayDramaStoryboard::where(['drama_id' => $data['drama_id'], 'episode_id' => $data['episode_id']])->max('sort') + 1 ?? 1;
+                                    $PluginShortplayDramaStoryboard = new PluginShortplayDramaStoryboard;
+                                    $PluginShortplayDramaStoryboard->channels_uid = $data['channels_uid'];
+                                    $PluginShortplayDramaStoryboard->drama_id = $data['drama_id'];
+                                    $PluginShortplayDramaStoryboard->episode_id = $data['episode_id'];
+                                    $PluginShortplayDramaStoryboard->scene_id = $result['scene_id'];
+                                    $PluginShortplayDramaStoryboard->sort = $sort;
+                                    $PluginShortplayDramaStoryboard->description = $result['description'];
                                     if (!empty($result['image_prompt'])) {
                                         $PluginShortplayDramaStoryboard->image_prompt = $result['image_prompt'];
                                     }
@@ -233,20 +246,17 @@ class Submit
                                     // $PluginShortplayDramaStoryboard->sfx = $storyboard['sfx'];
                                     $PluginShortplayDramaStoryboard->duration = $result['duration'];
                                     $PluginShortplayDramaStoryboard->save();
-
-                                    PluginShortplayDramaStoryboardActor::where(['storyboard_id' => $PluginShortplayDramaStoryboard->id])->delete();
-                                    PluginShortplayDramaStoryboardDialogue::where(['storyboard_id' => $PluginShortplayDramaStoryboard->id])->delete();
-                                    PluginShortplayDramaStoryboardProp::where(['storyboard_id' => $PluginShortplayDramaStoryboard->id])->delete();
-
+                                    $updateActors = [];
                                     if (!empty($result['actor'])) {
                                         foreach ($result['actor'] as $actor_key => $actor) {
                                             $PluginShortplayActor = null;
                                             if (!empty($actor['actor_id'])) {
                                                 $PluginShortplayActor = PluginShortplayActor::where(['actor_id' => $actor['actor_id']])->find();
-                                            } else {
-                                                $PluginShortplayActor = PluginShortplayActor::where(['channels_uid' => $data['channels_uid'], 'name' => $actor['name'], 'drama_id' => $PluginShortplayDramaStoryboard->drama_id])->find();
                                             }
                                             if (!$PluginShortplayActor) {
+                                                $PluginShortplayActor = PluginShortplayActor::where(['channels_uid' => $data['channels_uid'], 'name' => $actor['name']])->whereOr($whereOr)->find();
+                                            }
+                                            if (!$PluginShortplayActor && !empty($actor['description'])) {
                                                 $PluginShortplayActor = new PluginShortplayActor;
                                                 $PluginShortplayActor->channels_uid = $data['channels_uid'];
                                                 $PluginShortplayActor->uid = $data['uid'];
@@ -268,46 +278,9 @@ class Submit
                                                 $PluginShortplayDramaEpisodeActor->episode_id = $data['episode_id'];
                                                 $PluginShortplayDramaEpisodeActor->actor_id = $PluginShortplayActor->id;
                                                 $PluginShortplayDramaEpisodeActor->save();
+                                                $updateActors[] = "{$PluginShortplayActor->name}{{$PluginShortplayActor->actor_id}}";
                                             }
-                                            $PluginShortplayDramaStoryboardActor = new PluginShortplayDramaStoryboardActor();
-                                            $PluginShortplayDramaStoryboardActor->channels_uid = $data['channels_uid'];
-                                            $PluginShortplayDramaStoryboardActor->drama_id = $data['drama_id'];
-                                            $PluginShortplayDramaStoryboardActor->episode_id = $data['episode_id'];
-                                            $PluginShortplayDramaStoryboardActor->storyboard_id = $PluginShortplayDramaStoryboard->id;
-                                            $PluginShortplayDramaStoryboardActor->actor_id = $PluginShortplayActor->id;
-                                            $PluginShortplayDramaStoryboardActor->save();
-                                        }
-                                    }
-                                    $PluginShortplayActor = null;
-                                    if (!empty($result['dialogues'])) {
-                                        foreach ($result['dialogues'] as $dialogue_key => $dialogue) {
-                                            if (!empty($dialogue['actor']['actor_id'])) {
-                                                $PluginShortplayActor = PluginShortplayActor::where(['actor_id' => $dialogue['actor']['actor_id']])->find();
-                                            } else {
-                                                $PluginShortplayActor = PluginShortplayActor::where(['channels_uid' => $data['channels_uid'], 'name' => $dialogue['actor']['name'], 'drama_id' => $PluginShortplayDramaStoryboard->drama_id])->find();
-                                            }
-                                            if (!$PluginShortplayActor) {
-                                                $PluginShortplayActor = new PluginShortplayActor;
-                                                $PluginShortplayActor->channels_uid = $data['channels_uid'];
-                                                $PluginShortplayActor->uid = $data['uid'];
-                                                $PluginShortplayActor->drama_id = $data['drama_id'];
-                                                $PluginShortplayActor->episode_id = $data['episode_id'];
-                                                $PluginShortplayActor->actor_id = uniqid();
-                                                $PluginShortplayActor->name = $dialogue['actor']['name'];
-                                                $PluginShortplayActor->remarks = $dialogue['actor']['description'];
-                                                $PluginShortplayActor->status = ActorStatus::INITIALIZING['value'];
-                                                $PluginShortplayActor->save();
-                                                $PluginShortplayDramaActor = new PluginShortplayDramaActor();
-                                                $PluginShortplayDramaActor->channels_uid = $data['channels_uid'];
-                                                $PluginShortplayDramaActor->drama_id = $data['drama_id'];
-                                                $PluginShortplayDramaActor->actor_id = $PluginShortplayActor->id;
-                                                $PluginShortplayDramaActor->save();
-                                                $PluginShortplayDramaEpisodeActor = new PluginShortplayDramaEpisodeActor;
-                                                $PluginShortplayDramaEpisodeActor->channels_uid = $data['channels_uid'];
-                                                $PluginShortplayDramaEpisodeActor->drama_id = $data['drama_id'];
-                                                $PluginShortplayDramaEpisodeActor->episode_id = $data['episode_id'];
-                                                $PluginShortplayDramaEpisodeActor->actor_id = $PluginShortplayActor->id;
-                                                $PluginShortplayDramaEpisodeActor->save();
+                                            if ($PluginShortplayActor) {
                                                 $PluginShortplayDramaStoryboardActor = new PluginShortplayDramaStoryboardActor();
                                                 $PluginShortplayDramaStoryboardActor->channels_uid = $data['channels_uid'];
                                                 $PluginShortplayDramaStoryboardActor->drama_id = $data['drama_id'];
@@ -315,6 +288,20 @@ class Submit
                                                 $PluginShortplayDramaStoryboardActor->storyboard_id = $PluginShortplayDramaStoryboard->id;
                                                 $PluginShortplayDramaStoryboardActor->actor_id = $PluginShortplayActor->id;
                                                 $PluginShortplayDramaStoryboardActor->save();
+                                            }
+                                        }
+                                    }
+                                    $PluginShortplayActor = null;
+                                    if (!empty($result['dialogues'])) {
+                                        foreach ($result['dialogues'] as $dialogue_key => $dialogue) {
+                                            if (!empty($dialogue['actor']['actor_id'])) {
+                                                $PluginShortplayActor = PluginShortplayActor::where(['actor_id' => $dialogue['actor']['actor_id']])->find();
+                                            }
+                                            if (!$PluginShortplayActor) {
+                                                $PluginShortplayActor = PluginShortplayActor::where(['channels_uid' => $data['channels_uid'], 'name' => $dialogue['actor']['name']])->whereOr($whereOr)->find();
+                                            }
+                                            if (!$PluginShortplayActor) {
+                                                continue;
                                             }
                                             $PluginShortplayDramaStoryboardDialogue = new PluginShortplayDramaStoryboardDialogue();
                                             $PluginShortplayDramaStoryboardDialogue->channels_uid = $data['channels_uid'];
@@ -335,14 +322,17 @@ class Submit
                                             $previous_dialogues .= "{$PluginShortplayActor->name}：{$content}\n";
                                         }
                                     }
+                                    $updateProps = [];
                                     if (!empty($result['prop'])) {
                                         foreach ($result['prop'] as $prop_key => $prop) {
+                                            $PluginShortplayProp = null;
                                             if (!empty($prop['prop_id'])) {
-                                                $PluginShortplayProp = PluginShortplayProp::where(['id' => $prop['prop_id']])->find();
-                                            } else {
-                                                $PluginShortplayProp = PluginShortplayProp::where(['name' => $prop['name'], 'channels_uid' => $data['channels_uid'], 'drama_id' => $data['drama_id']])->find();
+                                                $PluginShortplayProp = PluginShortplayProp::where(['prop_id' => $prop['prop_id']])->find();
                                             }
                                             if (!$PluginShortplayProp) {
+                                                $PluginShortplayProp = PluginShortplayProp::where(['name' => $prop['name'], 'channels_uid' => $data['channels_uid'], 'drama_id' => $data['drama_id']])->find();
+                                            }
+                                            if (!$PluginShortplayProp && !empty($prop['description'])) {
                                                 $PluginShortplayProp = new PluginShortplayProp;
                                                 $PluginShortplayProp->channels_uid = $data['channels_uid'];
                                                 $PluginShortplayProp->uid = $data['uid'];
@@ -353,50 +343,63 @@ class Submit
                                                 $PluginShortplayProp->description = $prop['description'];
                                                 $PluginShortplayProp->status = PropStatus::INITIALIZING['value'];
                                                 $PluginShortplayProp->save();
+                                                $updateProps[] = "{$PluginShortplayProp->name}{{$PluginShortplayProp->prop_id}}";
                                             }
-                                            $PluginShortplayDramaStoryboardProp = new PluginShortplayDramaStoryboardProp();
-                                            $PluginShortplayDramaStoryboardProp->channels_uid = $data['channels_uid'];
-                                            $PluginShortplayDramaStoryboardProp->storyboard_id = $PluginShortplayDramaStoryboard->id;
-                                            $PluginShortplayDramaStoryboardProp->prop_id = $PluginShortplayProp->id;
-                                            $PluginShortplayDramaStoryboardProp->save();
+                                            if ($PluginShortplayProp) {
+                                                $PluginShortplayDramaStoryboardProp = new PluginShortplayDramaStoryboardProp();
+                                                $PluginShortplayDramaStoryboardProp->channels_uid = $data['channels_uid'];
+                                                $PluginShortplayDramaStoryboardProp->storyboard_id = $PluginShortplayDramaStoryboard->id;
+                                                $PluginShortplayDramaStoryboardProp->prop_id = $PluginShortplayProp->id;
+                                                $PluginShortplayDramaStoryboardProp->save();
+                                            }
                                         }
                                     }
+                                    $success_execution_count = $PluginModelTask->success_execution_count + 1;
                                     $PluginModelTask = PluginModelTask::where(['id' => $PluginModelTask->id])->with(['result'])->find();
+                                    if ($result['is_end']) {
+                                        $PluginModelTask->success_execution_count = $PluginModelTask->expectation_execution_count;
+                                    }
                                     if (
                                         $PluginModelTask->expectation_execution_count === null
                                         || ($PluginModelTask->expectation_execution_count !== null && $PluginModelTask->success_execution_count + 1 >= $PluginModelTask->expectation_execution_count)
                                     ) {
+                                        $PluginModel = PluginModel::where(['id' => $PluginModelTask->model_id])->find();
+                                        $point = $PluginModel->point * $success_execution_count;
+                                        Account::decPoints($PluginShortplayDrama->uid, $PluginShortplayDrama->channels_uid, $point > 200 ? 200 : $point, PointsBillScene::CONSUME['value'], null, '生成分镜', true, true);
                                         $PluginModelTask->status = ModelTaskStatus::SUCCESS['value'];
                                         $PluginModelTask->success_execution_count = Db::raw('success_execution_count + 1');
                                         $PluginModelTask->result->result = $result;
                                         $PluginModelTask->together(['result'])->save();
                                     } else {
+                                        $storyboards = '';
+                                        if (!empty($data['params']['form_data']['storyboards'])) {
+                                            $storyboards = $data['params']['form_data']['storyboards'];
+                                        }
+                                        $storyboards .= "- 序号：" . $PluginShortplayDramaStoryboard->sort . "\n- 画面描述：" . $PluginShortplayDramaStoryboard->description . "\n";
+                                        $storyboards .= "- 对话：" . $previous_dialogues . "\n\n";
                                         $PluginModelTask->status = ModelTaskStatus::WAIT['value'];
                                         $PluginModelTask->success_execution_count = Db::raw('success_execution_count + 1');
                                         $PluginModelTask->last_heartbeat = date('Y-m-d H:i:s', strtotime('+10 seconds'));
+                                        if (!empty($updateActors)) {
+                                            $data['params']['form_data']['actors'] .= "," . implode(',', $updateActors);
+                                        }
+                                        if (!empty($updateProps)) {
+                                            $data['params']['form_data']['props'] .= "," . implode(',', $updateProps);
+                                        }
                                         $data['params']['form_data']['previous_description'] = $PluginShortplayDramaStoryboard->description;
-                                        $data['params']['form_data']['storyboard_num'] = $data['params']['form_data']['storyboard_num'] + 1;
-                                        $PluginShortplayDramaStoryboard = PluginShortplayDramaStoryboard::where(['drama_id' => $data['drama_id'], 'episode_id' => $data['episode_id'], 'sort' => $data['params']['form_data']['storyboard_num']])->order('sort asc')->find();
-                                        if ($PluginShortplayDramaStoryboard) {
-                                            $data['params']['form_data']['description'] = $PluginShortplayDramaStoryboard->description;
-                                        } else {
-                                            $PluginModelTask->status = ModelTaskStatus::SUCCESS['value'];
-                                        }
-                                        $NextPluginShortplayDramaStoryboard = PluginShortplayDramaStoryboard::where(['drama_id' => $PluginShortplayDramaStoryboard->drama_id, 'episode_id' => $PluginShortplayDramaStoryboard->episode_id, 'sort' => $PluginShortplayDramaStoryboard->sort + 1])->order('sort asc')->find();
-                                        if ($NextPluginShortplayDramaStoryboard) {
-                                            $next_description = $NextPluginShortplayDramaStoryboard->description;
-                                        } else {
-                                            $next_description = '';
-                                        }
-                                        $data['params']['form_data']['next_description'] = $next_description;
                                         $data['params']['form_data']['previous_dialogues'] = $previous_dialogues;
+                                        $data['params']['form_data']['previous_sort'] = $PluginShortplayDramaStoryboard->sort;
+                                        $data['params']['form_data']['sort'] = $sort + 1;
+                                        $data['params']['form_data']['storyboards'] = $storyboards;
                                         $PluginModelTask->result->params = $data;
+                                        $PluginModelTask->result->result = $result;
                                         $PluginModelTask->together(['result'])->save();
                                     }
                                     $taksStatus = ModelTaskStatus::SUCCESS['value'];
                                     Db::commit();
                                 } catch (\Throwable $th) {
                                     Db::rollback();
+                                    Log::error('CREATIVE_STORYBOARDS RESULT:', $result);
                                     Log::error('Generate Storyboard Error:' . $th->getMessage() . PHP_EOL . $th->getTraceAsString());
                                 }
                             }

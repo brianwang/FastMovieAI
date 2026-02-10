@@ -30,8 +30,12 @@ import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { $http } from '@/common/http'
 import { ResponseCode } from '@/common/const'
-import { useUserStore } from '@/stores' 
+import { useUserStore } from '@/stores'
+
+// ========== 路由 ==========
 const router = useRouter()
+
+// ========== 状态 ==========
 const bigStars = ref<HTMLDivElement | null>(null)
 const smallStars = ref<HTMLDivElement | null>(null)
 const inputRefs = ref<(HTMLInputElement | null)[]>([])
@@ -40,10 +44,12 @@ const currentIndex = ref<number>(0)
 const loading = ref(false)
 const isPasting = ref(false)
 
+// ========== 计算属性 ==========
 const isCodeComplete = computed(() => {
     return codeArray.value.every(char => char.trim() !== '')
 })
 
+// ========== 工具函数 ==========
 const generateStars = (count: number, width: number, height: number) => {
     return Array.from({ length: count }, () =>
         `${Math.random() * width}px ${Math.random() * height}px white`
@@ -72,6 +78,7 @@ const focusInput = (index: number) => {
     })
 }
 
+// ========== 事件处理 ==========
 const handleContainerClick = (e: MouseEvent) => {
     const target = e.target as HTMLElement
     // 如果点击的是输入框本身，不需要处理
@@ -258,6 +265,7 @@ const handleGlobalPaste = (event: ClipboardEvent) => {
     }
 }
 
+// ========== 副作用 ==========
 onMounted(() => {
     initStars()
     // 自动聚焦第一个输入框

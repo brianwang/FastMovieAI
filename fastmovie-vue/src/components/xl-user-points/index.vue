@@ -7,7 +7,7 @@
                 </el-avatar>
                 <div class="flex flex-column flex-x-start grid-gap-1">
                     <span class="h8 font-weight-bold">{{ USERINFO?.nickname }}</span>
-                    <div class="h9 text-secondary">剩余积分 ： <span class="text-success"> {{ USERINFO.wallet?.points
+                    <div class="h9 text-secondary">剩余积分 ： <span class="text-success"> {{ WALLET?.points
                             }}</span> </div>
                 </div>
             </div>
@@ -52,13 +52,15 @@
 <script setup lang="ts">
 import { truncate } from '@/common/functions';
 import { ref } from 'vue';
-import { useRefs, useUserStore } from '@/stores';
+import { useRefs, useUserStore, useWalletStore } from '@/stores';
 import { useRouter } from 'vue-router';
 import { $http } from '@/common/http';
 import { ResponseCode } from '@/common/const';
 const router = useRouter();
 const userStore = useUserStore();
 const { USERINFO } = useRefs(userStore);
+const walletStore = useWalletStore();
+const { WALLET } = useRefs(walletStore);
 const visible = ref(false);
 const loading = ref(false);
 const options = [

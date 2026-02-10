@@ -209,7 +209,8 @@ a {
     .el-loading-spinner {
         --el-loading-spinner-size: 20px;
         --el-color-primary: #FFFFFF;
-        .el-loading-text{
+
+        .el-loading-text {
             font-size: 12px;
         }
     }
@@ -303,7 +304,7 @@ a {
     flex-wrap: wrap;
 }
 
-.x-login-message-box {
+.el-message-box.x-login-message-box {
     --el-messagebox-width: min(980px, 100%);
     --el-messagebox-height: 550px;
     --el-messagebox-padding-primary: 0px;
@@ -325,7 +326,7 @@ a {
     }
 }
 
-.x-loading-message-box {
+.el-message-box.x-loading-message-box {
     --el-messagebox-width: 100vw;
     --el-messagebox-height: 100vh;
     --el-messagebox-padding-primary: 0px;
@@ -482,7 +483,7 @@ a {
     }
 
     // .el-segmented__item-selected {
-        // background-image: linear-gradient(to left, #79FFFF 0%, #0DF283 100%);
+    // background-image: linear-gradient(to left, #79FFFF 0%, #0DF283 100%);
     // }
 }
 
@@ -602,10 +603,17 @@ a {
     display: flex;
     padding-top: 2px;
     padding-bottom: 2px;
+
     &-selected {
         background: rgba(255, 255, 255, 0.08);
     }
+
     &:hover {
         background: rgba(255, 255, 255, 0.16);
     }
+}
+
+
+.el-dialog__headerbtn:focus .el-dialog__close, .el-dialog__headerbtn:hover .el-dialog__close{
+    color: var(--el-color-success) !important;
 }

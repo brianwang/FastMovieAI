@@ -185,7 +185,7 @@ class Uploads
         $channels = $UploadsClassify->channels;
         $date_path = date('Ymd');
         $client = new Client([
-            'timeout' => 30,
+            'timeout' => 600,
             'verify' => false,
             'proxy' => false
         ]);
@@ -229,7 +229,11 @@ class Uploads
         if (file_exists($temp)) {
             return $temp;
         }
-        $client = new Client();
+        $client = new Client([
+            'proxy' => null,
+            'verify' => false,
+            'timeout' => 600
+        ]);
         $response = $client->get($url);
         $body = $response->getBody();
         $file = $body->getContents();

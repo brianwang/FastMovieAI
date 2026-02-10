@@ -4,13 +4,10 @@ namespace plugin\shortplay\app\api\controller;
 
 use app\Basic;
 use app\expose\enum\State;
-use GuzzleHttp\Client;
-use GuzzleHttp\Exception\TransferException;
 use plugin\control\utils\yidevs\Yidevs;
 use plugin\finance\expose\helper\Account;
 use plugin\finance\utils\enum\PointsBillScene;
 use plugin\model\app\model\PluginModel;
-use plugin\model\utils\enum\ModelScene;
 use plugin\notification\expose\helper\Push;
 use plugin\shortplay\app\model\PluginShortplayActor;
 use plugin\shortplay\app\model\PluginShortplayDrama;
@@ -23,7 +20,6 @@ use support\Log;
 use support\Request;
 use think\facade\Db;
 use Workerman\Coroutine;
-use Workerman\Timer;
 
 class IndexController extends Basic
 {
@@ -88,13 +84,23 @@ class IndexController extends Basic
         foreach (ActorAge::getOptions() as $value) {
             $age[] = $value['label'] . ':' . $value['value'] . '';
         }
+        $PluginShortplayDrama = new PluginShortplayDrama();
+        $PluginShortplayDrama->channels_uid = $request->channels_uid;
+        $PluginShortplayDrama->uid = $request->uid;
+        $PluginShortplayDrama->model_id = $PluginModel->id;
+        $PluginShortplayDrama->style_id = $post['style'];
+        $PluginShortplayDrama->script = $post['script'];
+        $PluginShortplayDrama->aspect_ratio = $post['aspect_ratio'];
+        $PluginShortplayDrama->episode_sum = $episode_sum;
+        $PluginShortplayDrama->episode_duration = $episode_duration;
+        $PluginShortplayDrama->state = State::NO['value'];
+        $PluginShortplayDrama->save();
         $data = [
             'channels_uid' => $request->channels_uid,
             'uid' => $request->uid,
             'model_id' => $PluginModel->id,
             'amount' => $PluginModel->point,
-            'uuid' => uniqid(),
-            'post' => $post,
+            'uuid' => $PluginShortplayDrama->id,
             'params' => [
                 'model' => $PluginModel->model_id,
                 'assistant' => $PluginModel->assistant_id,
@@ -124,6 +130,7 @@ class IndexController extends Basic
                         'uuid' => $data['uuid'],
                         'msg' => $th->getMessage()
                     ]);
+                    PluginShortplayDrama::where(['id' => $data['uuid']])->delete();
                     return;
                 }
                 $result = Yidevs::ChatAssistantCompletions($data['channels_uid'], $data['params']);
@@ -132,16 +139,9 @@ class IndexController extends Basic
                 }
                 Db::startTrans();
                 try {
-                    $PluginShortplayDrama = new PluginShortplayDrama();
-                    $PluginShortplayDrama->channels_uid = $data['channels_uid'];
-                    $PluginShortplayDrama->uid = $data['uid'];
-                    $PluginShortplayDrama->style_id = $data['post']['style'];
-                    $PluginShortplayDrama->model_id = $data['model_id'];
-                    $PluginShortplayDrama->script = $data['post']['script'];
+                    $PluginShortplayDrama = PluginShortplayDrama::where(['id' => $data['uuid']])->find();
+                    $PluginShortplayDrama->state = State::YES['value'];
                     $PluginShortplayDrama->title = $result['title'];
-                    $PluginShortplayDrama->aspect_ratio = $data['post']['aspect_ratio'];
-                    $PluginShortplayDrama->episode_sum = $data['post']['episode_sum'];
-                    $PluginShortplayDrama->episode_duration = $data['post']['episode_duration'];
                     $PluginShortplayDrama->description = $result['description'];
                     $PluginShortplayDrama->background_description = $result['background_description'];
                     $PluginShortplayDrama->outline = $result['outline'];
@@ -210,6 +210,7 @@ class IndexController extends Basic
                         Db::rollback();
                     }
                 }
+                PluginShortplayDrama::where(['id' => $data['uuid']])->delete();
                 Push::send([
                     'uid' => $data['uid'],
                     'channels_uid' => $data['channels_uid'],

@@ -12,6 +12,11 @@ class AuthType extends Enum
         'value' => 'user',
         'action' => 'user',
     ];
+    const WALLET = [
+        'label' => '钱包',
+        'value' => 'wallet',
+        'action' => 'user',
+    ];
     const NOTIFY = [
         'label' => '通知',
         'value' => 'notify',
@@ -85,6 +90,11 @@ class AuthType extends Enum
     const CLONE_VOICE = [
         'label' => '克隆音色',
         'value' => 'clonevoice',
+        'action' => 'user',
+    ];
+    const DOWNLOAD_PACKAGE = [
+        'label' => '打包ZIP包',
+        'value' => 'downloadpackage',
         'action' => 'user',
     ];
 }

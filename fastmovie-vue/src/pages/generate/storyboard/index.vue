@@ -195,6 +195,7 @@ const handleCurrentStoryboard = (item: any) => {
     currentStoryboardForm.value.image_prompt = item.image_prompt;
     currentStoryboardForm.value.video_prompt = item.video_prompt;
     currentStoryboardForm.value.first_image = item.image;
+    currentStoryboardForm.value.last_image = '';
     currentStoryboardForm.value.storyboard_location = item.storyboard_location;
     currentStoryboardForm.value.storyboard_space = item.storyboard_space;
     currentStoryboardForm.value.storyboard_time = item.storyboard_time;
@@ -204,6 +205,7 @@ const handleCurrentStoryboard = (item: any) => {
     currentStoryboardForm.value.narration = item.narration;
     taskSearch.alias_id = item.id;
     getTaskList();
+    handleVideoModelSelect(videoModel.value);
     dialogues.value = [];
     if (activeName.value === 'dialogue') {
         getDialogues();
@@ -227,16 +229,36 @@ const points = usePoints([model]);
 const videoModelPopoverRef = ref<any>(null);
 const videoModelButtonRef = ref<any>(null);
 const videoModel = ref<any>({});
+const videoModelFormRule = ref<any>({
+    last_image: true,
+    duration: []
+});
 const handleVideoModelSelect = (item?: any) => {
-    if (item) {
+    if (item && item.id) {
         videoModel.value = item;
+        currentStoryboardForm.value.duration = currentStoryboard.value.duration;
+        videoModelFormRule.value.duration = item.form.find((n: any) => n.helper_field === 'duration')?.options.map((n: any) => { return { label: n.label, value: parseInt(n.value) * 1000 } });
+        // 判断如果当前的duration不存在videoModelFormRule.value.duration中，则选一个最接近的值
+        if (!videoModelFormRule.value.duration.find((n: any) => n.value === currentStoryboardForm.value.duration)) {
+            currentStoryboardForm.value.duration = videoModelFormRule.value.duration.sort((a: any, b: any) => Math.abs(a.value - currentStoryboardForm.value.duration) - Math.abs(b.value - currentStoryboardForm.value.duration))[0].value;
+        }
+        videoModelFormRule.value.last_image = !!item.form.find((n: any) => n.helper_field === 'last_image');
     } else {
         videoModel.value = {};
         currentStoryboardForm.value.video_model_id = null;
+        videoModelFormRule.value.duration = [];
+        videoModelFormRule.value.last_image = true;
+        currentStoryboardForm.value.duration = currentStoryboard.value.duration;
     }
     videoModelPopoverRef.value?.hide();
 }
-const videoPoints = usePoints([videoModel]);
+const pointsForm = computed(() => {
+    return {
+        duration: Math.floor(currentStoryboardForm.value.duration / 1000),
+        resolution: '720P'
+    }
+});
+const videoPoints = usePoints([videoModel], ref(1), pointsForm);
 const generateImageLoading = ref(false);
 const handleGenerateImage = () => {
     if (generateImageLoading.value || currentStoryboard.value.image_state) return;
@@ -321,7 +343,12 @@ const submitBatchGenerateImage = () => {
             model_id: model.value.id,
             prompt: item.image_prompt,
         })
-    })).then(() => {
+    })).then((results: any[]) => {
+        results.forEach((result: any) => {
+            if (result.code !== ResponseCode.SUCCESS) {
+                ElMessage.error(result.msg);
+            }
+        })
         getStoryboardList();
     }).catch((error) => {
         console.error('submitBatchGenerateImage error', error);
@@ -339,10 +366,24 @@ const BatchGenerateVideo = () => {
     batchGenerateVideoList.value = storyboardList.value.filter((item: any) => !item.video)
     batchGenerateVideoLength.value = batchGenerateVideoList.value.length
 }
-const batchVideoPoints = usePoints([videoModel], batchGenerateVideoLength);
+// const batchVideoPoints = usePoints([videoModel], batchGenerateVideoLength);
+
+const batchVideoPoints = computed(() => {
+    let total = 0;
+    batchGenerateVideoList.value.forEach((item: any) => {
+        const result = usePoints([videoModel], ref(1), ref({
+            duration: Math.floor(item.duration / 1000),
+            resolution: '720P'
+        })).value;
+        if (result !== '免费') {
+            total += result;
+        }
+    }, 0);
+    return total;
+});
 const submitBatchGenerateVideo = () => {
     batchGenerateVideoLoading.value = true;
-    Promise.all(batchGenerateList.value.map((item: any) => {
+    Promise.all(batchGenerateVideoList.value.map((item: any) => {
         return $http.post('/app/shortplay/api/Generate/storyboardVideo', {
             storyboard_id: item.id,
             drama_id: drama_id.value,
@@ -350,7 +391,12 @@ const submitBatchGenerateVideo = () => {
             prompt: item.video_prompt,
             first_image: item.image
         })
-    })).then(() => {
+    })).then((results: any[]) => {
+        results.forEach((result: any) => {
+            if (result.code !== ResponseCode.SUCCESS) {
+                ElMessage.error(result.msg);
+            }
+        })
         getStoryboardList();
     }).catch((error) => {
         console.error('submitBatchGenerateVideo error', error);
@@ -369,7 +415,7 @@ const addListener = () => {
             if (res.image) {
                 findItem.image = res.image;
                 findItem.use_material_type = 'image';
-            }else{
+            } else {
                 ElMessage.error('生成图片失败');
             }
             if (findItem.id === currentStoryboard.value.id) {
@@ -387,7 +433,7 @@ const addListener = () => {
                     if (res.image) {
                         find.image = res.image;
                         find.use_material_type = 'image';
-                    }else{
+                    } else {
                         ElMessage.error('生成图片失败');
                     }
                     if (find.id === currentStoryboard.value.id) {
@@ -401,7 +447,7 @@ const addListener = () => {
                     if (res.video) {
                         find.video = res.video;
                         find.use_material_type = 'video';
-                    }else{
+                    } else {
                         ElMessage.error('生成视频失败');
                     }
                     if (find.id === currentStoryboard.value.id) {
@@ -414,7 +460,7 @@ const addListener = () => {
                     find.narration_state = 0;
                     if (res.audio) {
                         find.narration_audio = res.audio;
-                    }else{
+                    } else {
                         ElMessage.error('生成旁白音频失败');
                     }
                 }
@@ -453,7 +499,7 @@ const addListener = () => {
                     if (dialogue) {
                         if (res.audio) {
                             dialogue.audio = res.audio;
-                        }else{
+                        } else {
                             ElMessage.error('生成对话音频失败');
                         }
                         dialogue.voice_state = 0;
@@ -469,7 +515,7 @@ const addListener = () => {
             findItem.actor.status_enum = res.status;
             if (res.image) {
                 findItem.headimg = res.image;
-            }else{
+            } else {
                 ElMessage.error('生成演员形象失败');
             }
         }
@@ -481,7 +527,7 @@ const addListener = () => {
             findItem.status_enum = res.status;
             if (res.image) {
                 findItem.three_view_image = res.image;
-            }else{
+            } else {
                 ElMessage.error('生成演员形象失败');
             }
         }
@@ -493,7 +539,7 @@ const addListener = () => {
             findItem.prop.status_enum = res.status;
             if (res.image) {
                 findItem.prop.image = res.image;
-            }else{
+            } else {
                 ElMessage.error('生成物品失败');
             }
         }
@@ -505,7 +551,7 @@ const addListener = () => {
             findItem.prop.status_enum = res.status;
             if (res.image) {
                 findItem.prop.three_view_image = res.image;
-            }else{
+            } else {
                 ElMessage.error('生成物品失败');
             }
         }
@@ -1257,6 +1303,7 @@ AVCanvas.onSwitchToNextClip((currentTrackResource: TrackResourceInterface) => {
     currentStoryboardForm.value.narration = currentStoryboard.value.narration;
     taskSearch.alias_id = currentStoryboard.value.id;
     getTaskList();
+    handleVideoModelSelect(videoModel.value);
 });
 const handlePlayAudio = (audio: string) => {
     if (!audio) return;
@@ -1387,9 +1434,75 @@ const compsite = async () => {
         ElMessage.error(res.msg);
     }
 }
-const downloadPackage = () => {
-    ElMessage.info('打包下载功能暂未开放，敬请期待');
-    console.log('downloadPackage');
+const downloadPackageLoading = useLoading({
+    title: '正在打包下载',
+    tips: '请勿退出页面，否则打包下载会中断',
+    list: [
+        {
+            title: '初始化打包...'
+        },
+        {
+            title: '正在打包图片素材...'
+        },
+        {
+            title: '正在打包视频素材...'
+        },
+        {
+            title: '正在打包对话素材...'
+        },
+        {
+            title: '正在打包对话音频素材...'
+        },
+        {
+            title: '正在打包旁白素材...'
+        },
+        {
+            title: '正在打包旁白音频素材...'
+        },
+        {
+            title: '正在打包中...'
+        },
+    ],
+    showCancelButton: true,
+    cancelButtonText: '取消打包下载',
+    cancelButtonClick: () => {
+        downloadPackageLoading.close();
+        xlLoading.close();
+    }
+});
+const downloadPackageProcess = () => {
+    subscribe('private-downloadpackage-' + USERINFO.value?.user, (res: any) => {
+        if (res.action === 'process') {
+            downloadPackageLoading.xlLoadingRef.value?.setCurrentIndex(res.index);
+            downloadPackageLoading.xlLoadingRef.value?.setProgress(res.progress);
+            if(res.progress === 100) {
+                downloadPackageLoading.close();
+                const element = document.createElement('a');
+                element.href = res.url;
+                element.download = res.filename;
+                element.target = '_blank';
+                element.click();
+            }
+        } else {
+            downloadPackageLoading.close();
+            ElMessage.error(res.msg);
+        }
+    });
+}
+const downloadPackage = async () => {
+    const s = await downloadPackageLoading.open();
+    if (!s) {
+        return;
+    }
+    downloadPackageLoading.xlLoadingRef.value?.setCurrentIndex(0);
+    downloadPackageProcess();
+    const res: any = await $http.get('/app/shortplay/api/Storyboard/downloadPackage', { params: StoryboardSearch });
+    if (res.code === ResponseCode.SUCCESS) {
+        downloadPackageLoading.xlLoadingRef.value?.setProgress(5);
+    } else {
+        downloadPackageLoading.close();
+        ElMessage.error(res.msg);
+    }
 }
 onMounted(() => {
     getStoryboardList();
@@ -1497,7 +1610,7 @@ defineExpose({
                     <el-scrollbar class="task-list-scrollbar">
                         <div class="flex flex-column grid-gap-4 p-4 task-list" v-if="taskList.length > 0">
                             <div class="task-item" v-for="item in taskList" :key="item.id"
-                                :class="{ 'active': (currentStoryboard.use_material_type === 'image' && item.result.image_path === currentStoryboard.image) || (currentStoryboard.use_material_type === 'video' && item.result.video_path === currentStoryboard.video) }">
+                                :class="{ 'active': (item.scene === 'storyboard_image' && currentStoryboard.use_material_type === 'image' && item.result.image_path === currentStoryboard.image) || (item.scene === 'storyboard_video' && currentStoryboard.use_material_type === 'video' && item.result.video_path === currentStoryboard.video) }">
                                 <el-avatar :src="item.status === 'success' ? item.result.image_path : ''" fit="contain"
                                     shape="square" class="task-item-avatar">
                                     <el-icon v-if="item.status != 'success'" size="20" color="var(--el-color-info)">
@@ -1520,7 +1633,7 @@ defineExpose({
                                     </el-icon>
                                 </div>
                                 <div class="flex flex-center grid-gap-2 task-item-replace pointer"
-                                    v-if="item.status === 'success' && ((currentStoryboard.use_material_type === 'image' && item.result.image_path !== currentStoryboard.image) || (currentStoryboard.use_material_type === 'video' && item.result.video_path !== currentStoryboard.video))"
+                                    v-if="item.status === 'success' && !((item.scene === 'storyboard_image' && currentStoryboard.use_material_type === 'image' && item.result.image_path === currentStoryboard.image) || (item.scene === 'storyboard_video' && currentStoryboard.use_material_type === 'video' && item.result.video_path === currentStoryboard.video))"
                                     @click="currentTask = item">
                                 </div>
                             </div>
@@ -1651,7 +1764,7 @@ defineExpose({
                                                     :size="16"></el-avatar>
                                                 <span class="h10 text-ellipsis-1" style="max-width: 60px;">{{
                                                     model.name
-                                                    }}</span>
+                                                }}</span>
                                                 <el-icon size="16" class="pointer" @click.stop="handleModelSelect()">
                                                     <Close />
                                                 </el-icon>
@@ -1827,11 +1940,12 @@ defineExpose({
                                 <div class="flex flex-center grid-gap-2 mt-4">
                                     <el-avatar :src="currentStoryboardForm.first_image" fit="contain" :size="100"
                                         class="pointer" shape="square" ref="firstImageButtonRef" />
-                                    <el-icon color="var(--el-color-info)">
+                                    <el-icon color="var(--el-color-info)" v-if="videoModelFormRule.last_image">
                                         <DArrowRight />
                                     </el-icon>
                                     <el-avatar :src="currentStoryboardForm.last_image" fit="contain" :size="100"
-                                        shape="square" class="pointer" ref="lastImageButtonRef">
+                                        shape="square" class="pointer" ref="lastImageButtonRef"
+                                        v-if="videoModelFormRule.last_image">
                                         <div class="flex flex-column flex-center grid-gap-2">
                                             <el-icon color="var(--el-text-color-primary)" size="16">
                                                 <Plus />
@@ -1855,7 +1969,7 @@ defineExpose({
                                                     :size="16"></el-avatar>
                                                 <span class="h10 text-ellipsis-1" style="max-width: 60px;">{{
                                                     videoModel.name
-                                                    }}</span>
+                                                }}</span>
                                                 <el-icon size="16" class="pointer"
                                                     @click.stop="handleVideoModelSelect()">
                                                     <Close />
@@ -1909,14 +2023,12 @@ defineExpose({
                                     @select="handleVideoModelSelect" no-init scene="storyboard_video" />
                             </el-popover>
                             <el-popover popper-class="episode-popover" :virtual-ref="durationButtonRef"
-                                virtual-triggering placement="bottom" width="fit-content">
+                                :disabled="!videoModelFormRule.duration.length" virtual-triggering placement="bottom"
+                                width="fit-content">
                                 <div class="flex flex-column grid-gap-4 text-center">
                                     <span class="pointer hover-bg-hover rounded-round p-2"
-                                        @click="currentStoryboardForm.duration = 5000">5s</span>
-                                    <span class="pointer hover-bg-hover rounded-round p-2"
-                                        @click="currentStoryboardForm.duration = 10000">10s</span>
-                                    <span class="pointer hover-bg-hover rounded-round p-2"
-                                        @click="currentStoryboardForm.duration = 15000">15s</span>
+                                        v-for="item in videoModelFormRule.duration" :key="item.value"
+                                        @click="currentStoryboardForm.duration = item.value">{{ item.label }}</span>
                                 </div>
                             </el-popover>
                             <el-popover ref="firstImagePopoverRef" :virtual-ref="firstImageButtonRef" virtual-triggering
@@ -1994,13 +2106,17 @@ defineExpose({
                                                     shape="square">{{ truncate(currentDialogue.voice.name, 1)
                                                     }}</el-avatar>
                                                 <div class="flex-1 flex flex-column grid-gap-2">
-                                                    <span v-if="currentDialogue.voice.name">{{ currentDialogue.voice.name }}</span>
+                                                    <span v-if="currentDialogue.voice.name">{{
+                                                        currentDialogue.voice.name }}</span>
                                                     <span v-else>未命名</span>
-                                                    <div class="flex grid-gap-2" v-if="currentDialogue.voice.gender_enum && currentDialogue.voice.age_enum">
-                                                        <span class="bg-overlay h10 rounded-2 py-1 px-2" v-if="currentDialogue.voice.gender_enum?.label">{{
-                                                            currentDialogue.voice.gender_enum?.label }}</span>
-                                                        <span class="bg-overlay h10 rounded-2 py-1 px-2" v-if="currentDialogue.voice.age_enum?.label">{{
-                                                            currentDialogue.voice.age_enum?.label }}</span>
+                                                    <div class="flex grid-gap-2"
+                                                        v-if="currentDialogue.voice.gender_enum && currentDialogue.voice.age_enum">
+                                                        <span class="bg-overlay h10 rounded-2 py-1 px-2"
+                                                            v-if="currentDialogue.voice.gender_enum?.label">{{
+                                                                currentDialogue.voice.gender_enum?.label }}</span>
+                                                        <span class="bg-overlay h10 rounded-2 py-1 px-2"
+                                                            v-if="currentDialogue.voice.age_enum?.label">{{
+                                                                currentDialogue.voice.age_enum?.label }}</span>
                                                     </div>
                                                 </div>
                                                 <el-icon color="var(--el-color-info)" size="24" class="pointer" @click="dialogueVoiceDialogRef?.open({
@@ -2021,7 +2137,7 @@ defineExpose({
                                                                 <span>情绪：</span>
                                                                 <span class="flex-1 text-info">{{
                                                                     currentDialogue.voice.selected_emotion?.label
-                                                                    }}</span>
+                                                                }}</span>
                                                                 <el-icon>
                                                                     <ArrowDown />
                                                                 </el-icon>
@@ -2046,7 +2162,7 @@ defineExpose({
                                                                 <span>语言：</span>
                                                                 <span class="flex-1 text-info">{{
                                                                     currentDialogue.voice.selected_language?.label
-                                                                    }}</span>
+                                                                }}</span>
                                                                 <el-icon>
                                                                     <ArrowDown />
                                                                 </el-icon>
@@ -2197,11 +2313,14 @@ defineExpose({
                                             <div class="flex-1 flex flex-column grid-gap-2">
                                                 <span v-if="dramaInfo.voice.name">{{ dramaInfo.voice.name }}</span>
                                                 <span v-else>未命名</span>
-                                                <div class="flex grid-gap-2" v-if="dramaInfo.voice.gender_enum && dramaInfo.voice.age_enum">
-                                                    <span class="bg-overlay h10 rounded-2 py-1 px-2" v-if="dramaInfo.voice.gender_enum?.label">{{
-                                                        dramaInfo.voice.gender_enum?.label }}</span>
-                                                    <span class="bg-overlay h10 rounded-2 py-1 px-2" v-if="dramaInfo.voice.age_enum?.label">{{
-                                                        dramaInfo.voice.age_enum?.label }}</span>
+                                                <div class="flex grid-gap-2"
+                                                    v-if="dramaInfo.voice.gender_enum && dramaInfo.voice.age_enum">
+                                                    <span class="bg-overlay h10 rounded-2 py-1 px-2"
+                                                        v-if="dramaInfo.voice.gender_enum?.label">{{
+                                                            dramaInfo.voice.gender_enum?.label }}</span>
+                                                    <span class="bg-overlay h10 rounded-2 py-1 px-2"
+                                                        v-if="dramaInfo.voice.age_enum?.label">{{
+                                                            dramaInfo.voice.age_enum?.label }}</span>
                                                 </div>
                                             </div>
                                             <el-icon color="var(--el-color-info)" size="24" class="pointer" @click="narrationVoiceDialogRef?.open({

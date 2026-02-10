@@ -3,7 +3,7 @@
         <div class="stars small" ref="smallStars"></div>
         <div class="stars big" ref="bigStars"></div>
 
-        <IconCloseSvg class="close-btn" @click="router.back()" />
+        <IconCloseSvg class="close-btn" @click="router.replace('/')" />
         <div class="h1 font-weight-bold">订阅会员畅想更多权益</div>
         <div class="mt-7">
             <span>选择适合你的会员套餐或</span>

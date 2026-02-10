@@ -239,16 +239,10 @@ const handleInsertEmptyStoryboard = (afterItem?: any) => {
         after_id: afterItem?.id
     }).then((res: any) => {
         if (res.code === ResponseCode.SUCCESS) {
-            const newId = res.data.id
             let sort = 1;
             const itemData = {
-                id: newId,
-                scene_id: null,
-                drama_id: props.drama_id,
-                sort: sort,
-                component: "form",
-                description: '',
-                dialogue: null
+                ...res.data,
+                component: "form"
             };
             if (afterItem) {
                 // 插入本地
@@ -257,13 +251,14 @@ const handleInsertEmptyStoryboard = (afterItem?: any) => {
                 sort = itemData.sort;
                 storyboardList.value.splice(index + 1, 0, itemData)
             } else {
-                storyboardList.value.push(itemData)
+                storyboardList.value.unshift(itemData)
             }
-            storyboardList.value.sort((a, b) => a.sort - b.sort).forEach((item) => {
-                if (item.sort >= sort && item.id !== newId) {
+            storyboardList.value.forEach((item) => {
+                if (item.sort >= sort && item.id !== itemData.id) {
                     item.sort++;
                 }
             })
+            storyboardList.value = storyboardList.value.sort((a, b) => a.sort - b.sort)
 
         } else {
             ElMessage.error(res.msg)
@@ -663,6 +658,7 @@ defineExpose({
         bottom: 0;
         right: 0;
         z-index: 1;
+        --el-color-primary:#FFFFFF;
     }
 
 }

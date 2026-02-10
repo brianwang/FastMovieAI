@@ -1,6 +1,6 @@
 <template>
     <div class="container">
-        <el-scrollbar height="100%" wrap-class="flex-1" @end-reached="scrollBarEndReached" v-if="columns.length > 0">
+        <el-scrollbar height="100%" wrap-class="flex-1" @end-reached="scrollBarEndReached" v-if="columns[0].list.length > 0">
             <div ref="containerRef" class="waterfall">
                 <div class="column" v-for="(col, colIndex) in columns" :key="colIndex">
                     <div class="item" v-for="item in col.list" :key="item.id" @click="handleItemClick(item)">

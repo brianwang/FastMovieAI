@@ -74,6 +74,14 @@ class AgreementController extends Basic
 
         return $this->showAgreementForm($alias);
     }
+    public function cloning(Request $request)
+    {
+        $alias = 'cloning';
+        if ($request->method() === 'POST') {
+            return $this->saveAgreement($request->post(), $alias, $request->channels_uid);
+        }
+        return $this->showAgreementForm($alias);
+    }
 
     protected function saveAgreement(array $data, string $alias, $channels_uid)
     {

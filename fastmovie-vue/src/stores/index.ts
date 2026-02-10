@@ -7,6 +7,8 @@ import UserStore from "@/stores/modules/user";
 export const useUserStore = defineStore('user', UserStore)
 import ModelStore from "@/stores/modules/model";
 export const useModelStore = defineStore('model', ModelStore)
+import WalletStore from "@/stores/modules/wallet";
+export const useWalletStore = defineStore('wallet', WalletStore)
 export const useRefs = (store: StoreGeneric) => {
     return storeToRefs(store);
 }

@@ -12,7 +12,7 @@
             </div>
             <div class="flex flex-y-center grid-gap-10">
                 <div class="btn flex-shrink-0" @click="xlUserinfoRef.open">编辑主页</div>
-                <div class="btn flex-shrink-0" @click="xlInvitationCodeRef.open">邀请好友
+                <div class="btn flex-shrink-0" @click="openInvitationCode()">邀请好友
                 </div>
             </div>
         </div>
@@ -25,23 +25,29 @@
                 <xl-tabs-item value="publish">发布作品</xl-tabs-item>
             </xl-tabs>
         </div>
-        <Works v-if="activeName === 'works'" />
+        <Works v-if="activeName === 'works' && tabsActiveName === 'works'" />
+        <Share v-if="activeName === 'works' && tabsActiveName === 'publish'" />
         <Actors v-if="activeName === 'actor'" />
         <Voice v-if="activeName === 'voice'" />
-        <xl-invitation-code ref="xlInvitationCodeRef" />
         <xl-userinfo ref="xlUserinfoRef" />
     </div>
 </template>
 <script setup lang="ts">
+import { ref } from 'vue'
 import Works from './modules/works.vue';
 import Actors from './modules/actors.vue';
 import Voice from './modules/voice.vue';
+import Share from './modules/share.vue';
+import { useInvitationCode } from '@/composables/useInvitationCode';
 import { truncate } from '@/common/functions';
 import { useRefs, useUserStore } from '@/stores';
-import { ref } from 'vue'
-import XlInvitationCode from '@/components/xl-invitation-code/index.vue';
-const tabsActiveName = ref('works')
+
+// ========== 状态 ==========
 const activeName = ref('works')
+const tabsActiveName = ref('works')
+const xlUserinfoRef = ref<any>(null);
+const useInvitationCodeBox = useInvitationCode();
+// ========== 配置 ==========
 const options = [{
     label: '我的作品',
     value: 'works',
@@ -53,10 +59,14 @@ const options = [{
     value: 'voice'
 }];
 
+// ========== Store ==========
 const userStore = useUserStore();
 const { USERINFO } = useRefs(userStore);
-const xlInvitationCodeRef = ref<any>(null);
-const xlUserinfoRef = ref<any>(null);
+
+// ========== 事件处理 ==========
+const openInvitationCode = () => {
+    useInvitationCodeBox.open();
+}
 </script>
 <style scoped lang="scss">
 .container {

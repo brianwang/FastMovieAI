@@ -1,11 +1,19 @@
 <script setup lang="ts">
+import { ref, onMounted } from 'vue'
+import { ElMessage } from 'element-plus';
 import Edit from '@/pages/voice/modules/edit.vue'
 import { ResponseCode } from '@/common/const';
 import { $http } from '@/common/http';
 import { truncate } from '@/common/functions';
 import router from '@/routers';
+
+// ========== 状态 ==========
 const voiceList = ref<any[]>([]);
 const loading = ref(false);
+const editVoiceRef = ref<any>(null);
+const selectedVoice = ref<any>();
+
+// ========== 业务逻辑 ==========
 const getVoiceList = () => {
     voiceList.value = [];
     loading.value = true;
@@ -23,17 +31,14 @@ const getVoiceList = () => {
         loading.value = false;
     });
 }
-/* const handlePlayAudio = (audio: any) => {
-    if (!audio) return;
-    const audioElement = new Audio(audio);
-    audioElement.play();
-} */
-const editVoiceRef = ref<any>(null);
-const selectedVoice = ref<any>();
+
+// ========== 事件处理 ==========
 const handleVoiceItemClick = (item: any) => {
     selectedVoice.value = item;
     editVoiceRef.value?.open(item.id);
 }
+
+// ========== 副作用 ==========
 onMounted(() => {
     getVoiceList();
 })
@@ -52,7 +57,7 @@ onMounted(() => {
             </div>
             <div class="grid-column-1 rounded-4 p-4  flex flex-column grid-gap-4 actor-item actor-item-b flex-center"
                 v-for="item in voiceList" :key="item.id" @click="handleVoiceItemClick(item)"
-                :class="{ 'actor-item-selected': selectedVoice?.voice_id === item.voice_id }">
+                :class="{ 'actor-item-selected': selectedVoice?.id === item.id }">
                 <el-avatar :src="item.headimg" :size="60">
                     {{ truncate(item.name, 1) }}
                 </el-avatar>
@@ -62,7 +67,7 @@ onMounted(() => {
                     <div class="flex grid-gap-2" v-if="item.gender_enum && item.age_enum">
                         <span class="bg h10 rounded-2 py-1 px-2" v-if="item.gender_enum?.label">{{
                             item.gender_enum?.label
-                            }}</span>
+                        }}</span>
                         <span class="bg h10 rounded-2 py-1 px-2" v-if="item.age_enum?.label">{{
                             item.age_enum?.label }}</span>
                     </div>

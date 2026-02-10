@@ -547,11 +547,13 @@ CREATE TABLE `php_plugin_model`  (
   `assistant_name` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL,
   `scene` varchar(30) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '场景',
   `point` int NULL DEFAULT NULL COMMENT '计费',
+  `point_type` char(20) NULL DEFAULT 'times' COMMENT '计费类型',
   `state` tinyint(1) NULL DEFAULT 1 COMMENT '状态',
   `sort` int NULL DEFAULT 0,
   `create_time` datetime NULL DEFAULT NULL,
   `update_time` datetime NULL DEFAULT NULL,
   `description` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL,
+  `form` json NULL COMMENT '表单',
   PRIMARY KEY (`id`) USING BTREE
 ) ENGINE = InnoDB AUTO_INCREMENT = 26 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '模型' ROW_FORMAT = Dynamic;
 

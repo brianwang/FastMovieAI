@@ -78,9 +78,21 @@ class WalletController extends Basic
             'inline' => true
         ]);
 
-        $formBuilder->add('name', '名称', 'input', '', [
+        $formBuilder->add('uid', 'UID', 'input', '', [
             'props' => [
-                'placeholder' => '名称搜索',
+                'placeholder' => 'UID搜索',
+                'clearable' => true
+            ]
+        ]);
+        $formBuilder->add('mobile', '手机号', 'input', '', [
+            'props' => [
+                'placeholder' => '手机号搜索',
+                'clearable' => true
+            ]
+        ]);
+        $formBuilder->add('nickname', '昵称', 'input', '', [
+            'props' => [
+                'placeholder' => '昵称搜索',
                 'clearable' => true
             ]
         ]);
@@ -171,6 +183,14 @@ class WalletController extends Basic
         $nickname = $request->get('nickname');
         if ($nickname) {
             $where[] = ['u.nickname', 'like', "%{$nickname}%"];
+        }
+        $mobile = $request->get('mobile');
+        if ($mobile) {
+            $where[] = ['u.mobile', '=', $mobile];
+        }
+        $uid = $request->get('uid');
+        if ($uid) {
+            $where[] = ['w.uid', '=', $uid];
         }
         $list = PluginFinanceWallet::alias('w')
             ->join('plugin_user u', ' u.id=w.uid ')

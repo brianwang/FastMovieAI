@@ -249,8 +249,8 @@ onUnmounted(() => {
                 <span>初始化场景</span>
             </el-button>
             <el-button type="success" size="large" @click="storyboardRef?.openGenerateStoryboard?.()" :loading="!!episodeInfo.init_storyboard_state"
-                :disabled="storyboardList.length <= 0" :icon="IconBatchSvg">
-                <span>批量生成分镜</span>
+                :disabled="sceneList.length <= 0 || storyboardList.length > 0" :icon="IconBatchSvg">
+                <span>AI生成分镜</span>
             </el-button>
             <el-button type="success" size="large" @click="nextStep">
                 <span>下一步</span>

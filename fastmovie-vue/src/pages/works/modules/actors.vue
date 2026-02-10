@@ -256,7 +256,7 @@ const handleReplaceActor = (item: any) => {
     })
 }
 const handleDeleteActor = (item: any) => {
-    $http.post('/app/shortplay/api/DramaEpisode/deleteActor', {
+    $http.post('/app/shortplay/api/Drama/deleteActor', {
         id: item.id,
         drama_id: drama_id.value,
         episode_id: episode_id.value,

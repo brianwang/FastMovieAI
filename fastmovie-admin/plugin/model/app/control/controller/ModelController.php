@@ -3,6 +3,7 @@
 namespace plugin\model\app\control\controller;
 
 use app\Basic;
+use app\expose\build\builder\ComponentBuilder;
 use app\expose\build\builder\FormBuilder;
 use app\expose\build\builder\TableBuilder;
 use app\expose\enum\Action;
@@ -10,6 +11,7 @@ use app\expose\enum\State;
 use app\expose\enum\Week;
 use plugin\control\utils\yidevs\Yidevs;
 use plugin\model\app\model\PluginModel;
+use plugin\model\utils\enum\ModelPointType;
 use plugin\model\utils\enum\ModelScene;
 use plugin\model\utils\enum\ModelType;
 use support\Request;
@@ -252,24 +254,54 @@ class ModelController extends Basic
     public function create(Request $request)
     {
         if ($request->method() === 'POST') {
-            $data = $request->post();
-            $model_id = explode('_', $data['model'])[0];
-            $model_name = explode('_', $data['model'])[1];
-            $assistant_id = explode('_', $data['assistant'])[0];
-            $assistant_name = explode('_', $data['assistant'])[1];
-            unset($data['model'], $data['assistant']);
-            $data['model_id'] = $model_id;
-            $data['model_name'] = $model_name;
-            $data['assistant_id'] = $assistant_id;
-            $data['assistant_name'] = $assistant_name;
-            $data['channels_uid'] = $request->channels_uid;
+            $D = $request->post();
+            $D['channels_uid'] = $request->channels_uid;
             $model = new PluginModel();
-            if ($model->save($data)) {
+            $model_type = $D['model_type'];
+            switch ($model_type) {
+                case ModelType::CHAT['value']:
+                    $ydModel = Yidevs::ChatModels($request->channels_uid, ['model_id' => $D['model_id']]);
+                    $ydAssistant = Yidevs::ChatAssistantlist($request->channels_uid, ['assistant_id' => $D['assistant_id']]);
+                    break;
+                case ModelType::DRAW['value']:
+                    $ydModel = Yidevs::DrawModels($request->channels_uid, ['model_id' => $D['model_id']]);
+                    $ydAssistant = Yidevs::DrawAssistantlist($request->channels_uid, ['assistant_id' => $D['assistant_id']]);
+                    break;
+                case ModelType::TOVIDEO['value']:
+                    $ydModel = Yidevs::VideoModels($request->channels_uid, ['model_id' => $D['model_id']]);
+                    $ydAssistant = Yidevs::VideoAssistantlist($request->channels_uid, ['assistant_id' => $D['assistant_id']]);
+                    break;
+                case ModelType::AUDIO['value']:
+                    $ydModel = Yidevs::AudioModels($request->channels_uid, ['model_id' => $D['model_id']]);
+                    $ydAssistant = Yidevs::AudioAssistantlist($request->channels_uid, ['assistant_id' => $D['assistant_id']]);
+                    break;
+            }
+            if (!isset($ydModel[0])) {
+                return $this->fail('模型不存在');
+            }
+            if ($ydModel[0]['model_id'] != $D['model_id']) {
+                return $this->fail('模型不存在');
+            }
+            if (!isset($ydAssistant[0])) {
+                return $this->fail('助手不存在');
+            }
+            if ($ydAssistant[0]['assistant_id'] != $D['assistant_id']) {
+                return $this->fail('助手不存在');
+            }
+            $modelSelected = $ydModel[0];
+            $D['model_name'] = $modelSelected['name'];
+            if (!empty($modelSelected['form'])) {
+                $D['form'] = $modelSelected['form'];
+            }
+            $assistantSelected = $ydAssistant[0];
+            $D['assistant_name'] = $assistantSelected['name'];
+            if ($model->save($D)) {
                 return $this->success('创建成功');
             }
             return $this->fail('创建失败');
         }
         $builder = $this->getFormBuilder($request);
+        $builder->addValue('id', null);
         return $this->resData($builder);
     }
 
@@ -279,15 +311,44 @@ class ModelController extends Basic
         if ($request->method() === 'POST') {
             $D = $request->post();
             $model = PluginModel::where(['id' => $D['id']])->find();
-            $model_id = explode('_', $D['model'])[0];
-            $model_name = explode('_', $D['model'])[1];
-            $assistant_id = explode('_', $D['assistant'])[0];
-            $assistant_name = explode('_', $D['assistant'])[1];
-            unset($D['model'], $D['assistant']);
-            $D['model_id'] = $model_id;
-            $D['model_name'] = $model_name;
-            $D['assistant_id'] = $assistant_id;
-            $D['assistant_name'] = $assistant_name;
+            $model_type = $D['model_type'];
+            switch ($model_type) {
+                case ModelType::CHAT['value']:
+                    $ydModel = Yidevs::ChatModels($request->channels_uid, ['model_id' => $D['model_id']]);
+                    $ydAssistant = Yidevs::ChatAssistantlist($request->channels_uid, ['assistant_id' => $D['assistant_id']]);
+                    break;
+                case ModelType::DRAW['value']:
+                    $ydModel = Yidevs::DrawModels($request->channels_uid, ['model_id' => $D['model_id']]);
+                    $ydAssistant = Yidevs::DrawAssistantlist($request->channels_uid, ['assistant_id' => $D['assistant_id']]);
+                    break;
+                case ModelType::TOVIDEO['value']:
+                    $ydModel = Yidevs::VideoModels($request->channels_uid, ['model_id' => $D['model_id']]);
+                    $ydAssistant = Yidevs::VideoAssistantlist($request->channels_uid, ['assistant_id' => $D['assistant_id']]);
+                    break;
+                case ModelType::AUDIO['value']:
+                    $ydModel = Yidevs::AudioModels($request->channels_uid, ['model_id' => $D['model_id']]);
+                    $ydAssistant = Yidevs::AudioAssistantlist($request->channels_uid, ['assistant_id' => $D['assistant_id']]);
+                    break;
+            }
+            if (!isset($ydModel[0])) {
+                return $this->fail('模型不存在');
+            }
+            if ($ydModel[0]['model_id'] != $D['model_id']) {
+                return $this->fail('模型不存在');
+            }
+            if (!isset($ydAssistant[0])) {
+                return $this->fail('助手不存在');
+            }
+            if ($ydAssistant[0]['assistant_id'] != $D['assistant_id']) {
+                return $this->fail('助手不存在');
+            }
+            $modelSelected = $ydModel[0];
+            $D['model_name'] = $modelSelected['name'];
+            if (!empty($modelSelected['form'])) {
+                $D['form'] = $modelSelected['form'];
+            }
+            $assistantSelected = $ydAssistant[0];
+            $D['assistant_name'] = $assistantSelected['name'];
             if ($model->save($D)) {
                 return $this->success('更新成功');
             }
@@ -295,17 +356,14 @@ class ModelController extends Basic
         }
         $id = $request->get('id');
         $model = PluginModel::where(['id' => $id])->find();
-        $model->model = $model->model_id . '_' . $model->model_name;
-        $model->assistant = $model->assistant_id . '_' . $model->assistant_name;
-        unset($model->model_id, $model->model_name, $model->assistant_id, $model->assistant_name);
         $builder = $this->getFormBuilder($request);
-        $model->state = (int)$model->state;
         $builder->setData($model->toArray());
         return $this->resData($builder);
     }
 
     public function getFormBuilder(Request $request)
     {
+        $Component = new ComponentBuilder();
         $formBuilder = new FormBuilder(null, null, [
             'labelPosition' => 'right',
             'label-width' => "200px",
@@ -332,13 +390,16 @@ class ModelController extends Basic
             'subProps' => [
                 'border' => true
             ],
+            'where' => [
+                ['id', 'null', null]
+            ]
         ]);
         # 对话模型
         $ydModel = Yidevs::ChatModels($request->channels_uid);
         $modelList = $assistantList = [];
         foreach ($ydModel as $model) {
             $modelList[] = [
-                'value' => $model['model_id'] . '_' . $model['name'],
+                'value' => $model['model_id'],
                 'tips' => $model['integral'] . $model['integral_unit'],
                 'label' => $model['name']
             ];
@@ -346,23 +407,29 @@ class ModelController extends Basic
         $ydAssistant = Yidevs::ChatAssistantlist($request->channels_uid);
         foreach ($ydAssistant as $assistant) {
             $assistantList[] = [
-                'value' => $assistant['assistant_id'] . '_' . $assistant['name'],
+                'value' => $assistant['assistant_id'],
                 'tips' => $assistant['integral'] . $assistant['integral_unit'],
                 'label' => $assistant['name']
             ];
         }
-        $formBuilder->add('model', '绑定模型', 'select', '', [
+        $formBuilder->add('model_id', '绑定模型', 'select', '', [
             'required' => true,
             'options' => $modelList,
             'where' => [
                 ['model_type', '=', ModelType::CHAT['value']]
+            ],
+            'props' => [
+                'filterable' => true
             ]
         ]);
-        $formBuilder->add('assistant', '绑定助手', 'select', '', [
+        $formBuilder->add('assistant_id', '绑定助手', 'select', '', [
             'required' => true,
             'options' => $assistantList,
             'where' => [
                 ['model_type', '=', ModelType::CHAT['value']]
+            ],
+            'props' => [
+                'filterable' => true
             ]
         ]);
         # 绘图模型
@@ -370,7 +437,7 @@ class ModelController extends Basic
         $modelList = $assistantList = [];
         foreach ($ydModel as $model) {
             $modelList[] = [
-                'value' => $model['model_id'] . '_' . $model['name'],
+                'value' => $model['model_id'],
                 'tips' => $model['integral'] . $model['integral_unit'],
                 'label' => $model['name']
             ];
@@ -378,23 +445,29 @@ class ModelController extends Basic
         $ydAssistant = Yidevs::DrawAssistantlist($request->channels_uid);
         foreach ($ydAssistant as $assistant) {
             $assistantList[] = [
-                'value' => $assistant['assistant_id'] . '_' . $assistant['name'],
+                'value' => $assistant['assistant_id'],
                 'tips' => $assistant['integral'] . $assistant['integral_unit'],
                 'label' => $assistant['name']
             ];
         }
-        $formBuilder->add('model', '绑定模型', 'select', '', [
+        $formBuilder->add('model_id', '绑定模型', 'select', '', [
             'required' => true,
             'options' => $modelList,
             'where' => [
                 ['model_type', '=', ModelType::DRAW['value']]
+            ],
+            'props' => [
+                'filterable' => true
             ]
         ]);
-        $formBuilder->add('assistant', '绑定助手', 'select', '', [
+        $formBuilder->add('assistant_id', '绑定助手', 'select', '', [
             'required' => true,
             'options' => $assistantList,
             'where' => [
                 ['model_type', '=', ModelType::DRAW['value']]
+            ],
+            'props' => [
+                'filterable' => true
             ]
         ]);
         # 视频模型
@@ -402,7 +475,7 @@ class ModelController extends Basic
         $modelList = $assistantList = [];
         foreach ($ydModel as $model) {
             $modelList[] = [
-                'value' => $model['model_id'] . '_' . $model['name'],
+                'value' => $model['model_id'],
                 'tips' => $model['integral'] . $model['integral_unit'],
                 'label' => $model['name']
             ];
@@ -410,23 +483,29 @@ class ModelController extends Basic
         $ydAssistant = Yidevs::VideoAssistantlist($request->channels_uid);
         foreach ($ydAssistant as $assistant) {
             $assistantList[] = [
-                'value' => $assistant['assistant_id'] . '_' . $assistant['name'],
+                'value' => $assistant['assistant_id'],
                 'tips' => $assistant['integral'] . $assistant['integral_unit'],
                 'label' => $assistant['name']
             ];
         }
-        $formBuilder->add('model', '绑定模型', 'select', '', [
+        $formBuilder->add('model_id', '绑定模型', 'select', '', [
             'required' => true,
             'options' => $modelList,
             'where' => [
                 ['model_type', '=', ModelType::TOVIDEO['value']]
+            ],
+            'props' => [
+                'filterable' => true
             ]
         ]);
-        $formBuilder->add('assistant', '绑定助手', 'select', '', [
+        $formBuilder->add('assistant_id', '绑定助手', 'select', '', [
             'required' => true,
             'options' => $assistantList,
             'where' => [
                 ['model_type', '=', ModelType::TOVIDEO['value']]
+            ],
+            'props' => [
+                'filterable' => true
             ]
         ]);
         # 音频模型
@@ -434,7 +513,7 @@ class ModelController extends Basic
         $modelList = $assistantList = [];
         foreach ($ydModel as $model) {
             $modelList[] = [
-                'value' => $model['model_id'] . '_' . $model['name'],
+                'value' => $model['model_id'],
                 'tips' => $model['integral'] . $model['integral_unit'],
                 'label' => $model['name']
             ];
@@ -442,23 +521,29 @@ class ModelController extends Basic
         $ydAssistant = Yidevs::AudioAssistantlist($request->channels_uid);
         foreach ($ydAssistant as $assistant) {
             $assistantList[] = [
-                'value' => $assistant['assistant_id'] . '_' . $assistant['name'],
+                'value' => $assistant['assistant_id'],
                 'tips' => $assistant['integral'] . $assistant['integral_unit'],
                 'label' => $assistant['name']
             ];
         }
-        $formBuilder->add('model', '绑定模型', 'select', '', [
+        $formBuilder->add('model_id', '绑定模型', 'select', '', [
             'required' => true,
             'options' => $modelList,
             'where' => [
                 ['model_type', '=', ModelType::AUDIO['value']]
+            ],
+            'props' => [
+                'filterable' => true
             ]
         ]);
-        $formBuilder->add('assistant', '绑定助手', 'select', '', [
+        $formBuilder->add('assistant_id', '绑定助手', 'select', '', [
             'required' => true,
             'options' => $assistantList,
             'where' => [
                 ['model_type', '=', ModelType::AUDIO['value']]
+            ],
+            'props' => [
+                'filterable' => true
             ]
         ]);
 
@@ -470,6 +555,25 @@ class ModelController extends Basic
         ]);
         $formBuilder->add('point', '扣除数量', 'input-number', '', [
             'required' => true,
+        ]);
+        $formBuilder->add('point_type', '计费类型', 'radio', ModelPointType::TIMES['value'], [
+            'col' => [
+                'xs' => 24,
+                'sm' => 12,
+                'md' => 16,
+                'lg' => 18,
+                'xl' => 20
+            ],
+            'required' => true,
+            'options' => ModelPointType::getOptions(),
+            'prompt' => [
+                $Component->add('text', ['default' => '计费类型'], ['type' => 'info', 'size' => 'small'])
+                    ->add('text', ['default' => ModelPointType::FIELD_RULE['label'] . ':通过表单中，组件选择器、单选框、多选框的值中的基础点数和倍数计算点数'], ['type' => 'info', 'size' => 'small'])
+                    ->builder()
+            ],
+            'subProps' => [
+                'border' => true
+            ]
         ]);
         $formBuilder->add('scene', '场景', 'select', '', [
             'required' => true,
@@ -522,7 +626,7 @@ class ModelController extends Basic
 
         // JSON 文件路径（放在 plugin/model 目录下）
         $jsonFile = base_path('plugin/model/modal.json');
-        
+
         // 检查文件是否存在
         if (!file_exists($jsonFile)) {
             return $this->fail('初始化数据文件不存在：' . $jsonFile);
@@ -547,12 +651,23 @@ class ModelController extends Basic
 
         // 定义需要排除的字段（id 和 channels_uid）
         $excludeFields = ['id', 'channels_uid'];
-        
+
         // 定义允许的字段（除了 id 和 channels_uid 之外的所有字段）
         $allowedFields = [
-            'name', 'icon', 'model_type', 'model_id', 'model_name',
-            'assistant_id', 'assistant_name', 'scene', 'point',
-            'state', 'sort', 'description', 'create_time', 'update_time'
+            'name',
+            'icon',
+            'model_type',
+            'model_id',
+            'model_name',
+            'assistant_id',
+            'assistant_name',
+            'scene',
+            'point',
+            'state',
+            'sort',
+            'description',
+            'create_time',
+            'update_time'
         ];
 
         $successCount = 0;

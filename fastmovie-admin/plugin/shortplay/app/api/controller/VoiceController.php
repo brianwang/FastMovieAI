@@ -38,10 +38,7 @@ class VoiceController extends Basic
             if ($model_id) {
                 $where[] = ['model_id', '=', $model_id];
             }
-            $status = $request->get('status');
-            if ($status) {
-                $where[] = ['status', '=', $status];
-            }
+            $where[] = ['status', '=', ModelVoiceStatus::SUCCESS['value']];
             $voice = PluginModelVoice::where($where)->order('id desc')->select()->each(function ($item) {
                 $item->gender_enum = ActorGender::get($item->gender);
                 $item->age_enum = ActorAge::get($item->age);

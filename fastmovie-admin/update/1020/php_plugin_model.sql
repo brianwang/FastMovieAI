@@ -1,0 +1,1 @@
+ALTER TABLE `php_plugin_model` ADD COLUMN `point_type` char(20) NULL DEFAULT 'times' AFTER `point`;

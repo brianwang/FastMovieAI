@@ -54,6 +54,13 @@
             "show":false
         },
         {
+            "title":"声音克隆协议",
+            "icon":"BellFilled",
+            "path":"/app/article/control/Agreement/cloning",
+            "component":"form",
+            "show":true
+        },
+        {
             "title":"添加公告",     
             "path":"/app/article/control/Announcement/create",
             "component":"form",

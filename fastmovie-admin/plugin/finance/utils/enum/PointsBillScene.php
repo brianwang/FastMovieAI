@@ -10,10 +10,10 @@ class PointsBillScene extends Enum
         'label' => '管理员操作',
         'value' => 'admin',
         'props' => [
-            'type' => 'info'
+            'type' => 'warning'
         ]
     ];
-    const RECHARGE = [  
+    const RECHARGE = [
         'label' => '充值',
         'value' => 'recharge',
         'props' => [
@@ -24,26 +24,33 @@ class PointsBillScene extends Enum
         'label' => 'VIP升级',
         'value' => 'vip_upgrade',
         'props' => [
-            'type' => 'warning'
+            'type' => 'success'
         ]
     ];
     const REGISTER = [
         'label' => '注册',
         'value' => 'register',
         'props' => [
-            'type' => 'primary'
+            'type' => 'warning'
         ]
     ];
     const INVITE = [
         'label' => '邀请',
         'value' => 'invite',
         'props' => [
-            'type' => 'success'
+            'type' => 'warning'
         ]
     ];
-    const CONSUME=[
+    const CONSUME = [
         'label' => '消费',
         'value' => 'consume',
+        'props' => [
+            'type' => 'primary'
+        ]
+    ];
+    const REFUNDED = [
+        'label' => '退款',
+        'value' => 'refunded',
         'props' => [
             'type' => 'danger'
         ]

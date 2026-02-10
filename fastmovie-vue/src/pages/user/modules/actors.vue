@@ -1,13 +1,19 @@
 <script setup lang="ts">
+import { ref, reactive, onMounted, onUnmounted } from 'vue'
+import { ElMessage } from 'element-plus';
+import { UploadFilled } from '@element-plus/icons-vue';
 import { ResponseCode } from '@/common/const';
 import { $http } from '@/common/http';
 import { useWebConfigStore, useUserStore, useRefs } from '@/stores';
-import { UploadFilled } from '@element-plus/icons-vue';
 import { usePush } from '@/composables/usePush';
+
+// ========== Store ==========
 const userStore = useUserStore();
 const { USERINFO } = useRefs(userStore);
 const webConfigStore = useWebConfigStore();
 const { WEBCONFIG } = useRefs(webConfigStore);
+
+// ========== 状态 ==========
 const ActorSearch = reactive({
     type: 'personal',
     name: '',
@@ -19,6 +25,13 @@ const ActorSearch = reactive({
 const actorList = ref<any[]>([]);
 const loading = ref(false);
 const actorCreateRef = ref<any>(null);
+const previewImageVisible = ref(false);
+const imageList = ref<any[]>([]);
+
+// ========== Composables ==========
+const { subscribe, unsubscribeAll } = usePush();
+
+// ========== 业务逻辑 ==========
 const getActorList = () => {
     loading.value = true;
     $http.get('/app/shortplay/api/Actor/index', { params: ActorSearch }).then((res: any) => {
@@ -31,21 +44,7 @@ const getActorList = () => {
         loading.value = false;
     })
 }
-const handleDeleteActor = (item: any) => {
-    $http.post('/app/shortplay/api/Actor/delete', {
-        id: item.id,
-    }).then((res: any) => {
-        if (res.code === ResponseCode.SUCCESS) {
-            ElMessage.success(res.msg);
-            getActorList();
-        } else {
-            ElMessage.error(res.msg);
-        }
-    })
-}
-const previewImageVisible = ref(false);
-const imageList = ref<any[]>([]);
-const { subscribe, unsubscribeAll } = usePush();
+
 const addListener = () => {
     subscribe('private-generateactorimage-' + USERINFO.value?.user, (res: any) => {
         console.log('channels complete info message', res);
@@ -70,10 +69,27 @@ const addListener = () => {
         actorCreateRef.value?.subscribe?.('generateactorthreeviewimage', res);
     });
 }
+
+// ========== 事件处理 ==========
+const handleDeleteActor = (item: any) => {
+    $http.post('/app/shortplay/api/Actor/delete', {
+        id: item.id,
+    }).then((res: any) => {
+        if (res.code === ResponseCode.SUCCESS) {
+            ElMessage.success(res.msg);
+            getActorList();
+        } else {
+            ElMessage.error(res.msg);
+        }
+    })
+}
+
+// ========== 副作用 ==========
 onMounted(() => {
     getActorList();
     addListener();
 })
+
 onUnmounted(() => {
     console.log('actors unmounted');
     unsubscribeAll();
