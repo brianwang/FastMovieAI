@@ -642,6 +642,12 @@ vue-tsc --noEmit
 
 本项目仅供学习和研究使用，使用本项目所产生的一切后果由使用者自行承担。请遵守相关法律法规，不得用于非法用途。
 
+## ⚠️ 优秀开源项目推荐
+
+- [imaiwork](https://gitee.com/imai-work/imaiwork)
+- [BuildingAI](https://gitee.com/BidingCC/BuildingAI)
+- [aiflowy](https://gitee.com/aiflowy/aiflowy)
+
 ## 💬 联系方式
 
 如有问题或建议，欢迎通过以下方式联系：
