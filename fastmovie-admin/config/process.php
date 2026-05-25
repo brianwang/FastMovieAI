@@ -18,7 +18,9 @@ use support\Log;
 use support\Request;
 use app\process\Http;
 use app\process\Monitor;
-use Workerman\Events\Swoole;
+
+// Swoole is optional — falls back to Workerman default event loop
+$swooleClass = class_exists(\Swoole\Coroutine::class) ? \Workerman\Events\Swoole::class : null;
 
 global $argv;
 
@@ -30,7 +32,7 @@ return [
         'user' => '',
         'group' => '',
         'reusePort' => false,
-        'eventLoop' => Swoole::class,
+        'eventLoop' => $swooleClass,
         'context' => [],
         'constructor' => [
             'requestClass' => Request::class,
@@ -68,6 +70,6 @@ return [
     ],
     'AutoDeleteUpload' => [
         'handler' => AutoDeleteUpload::class,
-        'eventLoop' => Swoole::class,
+        'eventLoop' => $swooleClass,
     ]
 ];

@@ -2,6 +2,7 @@
 import { ResponseCode } from '@/common/const';
 import { $http } from '@/common/http';
 import { useRoute } from 'vue-router';
+import DOMPurify from 'isomorphic-dompurify';
 const route = useRoute();
 const article = route.params.article as string | number
 const details = ref<any>();
@@ -17,5 +18,5 @@ onMounted(() => {
 })
 </script>
 <template>
-    <div v-html="details?.content.content"></div>
+    <div v-html="DOMPurify.sanitize(details?.content?.content || '')"></div>
 </template>

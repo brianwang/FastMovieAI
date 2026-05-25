@@ -84,7 +84,12 @@ class Rsa
         ];
     }
     # 以下是数字加密解密
+    # 密钥从环境变量 AES_KEY 读取，无配置时使用默认值（建议生产环境修改）
     const PASSWORD = 'MAW512P89WIAUW9G7OHQWVGAPX51WPSN';
+    private static function getPassword(): string
+    {
+        return env('AES_KEY', self::PASSWORD);
+    }
     /**
      * 数字加密函数
      *
@@ -96,7 +101,7 @@ class Rsa
     {
         // 生成随机的初始向量
         $iv = openssl_random_pseudo_bytes(openssl_cipher_iv_length('aes-256-cbc'));
-        $password = $password ?: self::PASSWORD;
+        $password = $password ?: self::getPassword();
         // 加密数字
         $encrypted = openssl_encrypt($number, 'aes-256-cbc', $password, 0, $iv);
 
@@ -122,7 +127,7 @@ class Rsa
         $iv = substr($decoded, 0, $ivLength);
         $encryptedData = substr($decoded, $ivLength);
 
-        $password = $password ?: self::PASSWORD;
+        $password = $password ?: self::getPassword();
 
         // 解密数据
         $decrypted = openssl_decrypt($encryptedData, 'aes-256-cbc', $password, 0, $iv);

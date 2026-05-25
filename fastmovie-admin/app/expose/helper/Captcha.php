@@ -40,6 +40,8 @@ class Captcha
         if (strtolower($captcha) !== $captchaData['captcha']) {
             throw new Exception('图像验证码不正确');
         }
+        // 验证后立即清除，防止重复使用
+        $request->session()->delete('captcha');
         return true;
     }
     public static function create()

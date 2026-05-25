@@ -1,3 +1,16 @@
+2025-04-16 Version: 3.1.3
+- Update API CreateSmsSign: add request parameters AuthorizationLetterId.
+- Update API GetSmsSign: add response parameters Body.AuthorizationLetterAuditPass.
+- Update API GetSmsSign: add response parameters Body.AuthorizationLetterId.
+- Update API QuerySmsSignList: add response parameters Body.SmsSignList.$.AuthorizationLetterId.
+- Update API QuerySmsSignList: add response parameters Body.SmsSignList.$.authorizationLetterAuditPass.
+- Update API UpdateSmsSign: add request parameters AuthorizationLetterId.
+
+
+2025-03-26 Version: 3.1.2
+- Update API GetSmsTemplate: add response parameters Body.VendorAuditStatus.
+
+
 2025-01-03 Version: 3.1.1
 - Update API GetSmsSign: update response param.
 - Update API QueryExtCodeSign: update param ExtCode.

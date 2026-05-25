@@ -171,12 +171,20 @@ class UserController extends Basic
     {
         if ($request->method() === 'POST') {
             $D = $request->post();
-            $D['channels_uid'] = $request->channels_uid;
             if (empty($D['password'])) {
                 return $this->fail('密码不能为空');
             }
             try {
-                PluginChannelsUser::create($D);
+                $User = new PluginChannelsUser();
+                $User->channels_uid = $request->channels_uid;
+                $User->role_id = $D['role_id'] ?? 0;
+                $User->username = $D['username'] ?? '';
+                $User->nickname = $D['nickname'] ?? '';
+                $User->headimg = $D['headimg'] ?? '';
+                $User->mobile = $D['mobile'] ?? '';
+                $User->email = $D['email'] ?? '';
+                $User->password = $D['password'];
+                $User->save();
             } catch (\Throwable $th) {
                 return $this->exception($th);
             }

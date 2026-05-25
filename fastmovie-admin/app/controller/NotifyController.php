@@ -21,7 +21,7 @@ class NotifyController
     public function wechat(Request $request, $plugin, $template_id)
     {
         $data = $request->post();
-        Log::error('微信支付回调1111', $data);
+        Log::info('微信支付回调');
         try {
             $D = $request->post();
             if (PaymentNotifyWechat::where(['notify_id' => $D['id']])->count()) {
@@ -68,7 +68,7 @@ class NotifyController
             $wxpay = Pay::wechat($config);
             $data = $wxpay->callback($D);
             $obj = null;
-            Log::error('微信支付回调222', (array)$data);
+            Log::info('微信支付回调成功');
             Db::startTrans();
             try {
                 $PaymentNotifyWechat = new PaymentNotifyWechat;

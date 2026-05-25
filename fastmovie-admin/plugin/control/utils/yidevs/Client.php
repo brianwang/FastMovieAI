@@ -38,7 +38,7 @@ class Client
         $this->HttpClient = new GuzzleHttpClient([
             'base_uri' => $this->domain,
             'timeout' => 600,
-            'verify' => false,
+            'verify' => (bool) getenv('YIDEVS_VERIFY_SSL') ?: true,
             'proxy' => false
         ]);
     }

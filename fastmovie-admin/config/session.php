@@ -56,9 +56,9 @@ return [
     
     'http_only' => true,
 
-    'secure' => false,
-    
-    'same_site' => '',
+    'secure' => false, // 生产环境建议设为 true（HTTPS）
+
+    'same_site' => 'Lax',
 
     'gc_probability' => [1, 1000],
 

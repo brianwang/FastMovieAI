@@ -90,7 +90,11 @@ trait Json
      */
     protected static function server($th, $http_code = 500)
     {
-        return self::json(['code' => $th->getCode() ? $th->getCode() : ResponseCode::FAIL, 'msg' => $th->getMessage(), 'data' => ['file' => $th->getFile(), 'line' => $th->getLine()]], JSON_UNESCAPED_UNICODE, $http_code);
+        $data = [];
+        if (config('app.debug')) {
+            $data = ['file' => $th->getFile(), 'line' => $th->getLine()];
+        }
+        return self::json(['code' => $th->getCode() ? $th->getCode() : ResponseCode::FAIL, 'msg' => config('app.debug') ? $th->getMessage() : 'Internal Server Error', 'data' => $data], JSON_UNESCAPED_UNICODE, $http_code);
     }
     /**
      * 返回JSON

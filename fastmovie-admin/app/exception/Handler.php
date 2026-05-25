@@ -25,6 +25,6 @@ class Handler extends ExceptionHandler
             Log::error($exception->getTraceAsString());
             return parent::render($request, $exception);
         }
-        return new Response(500, [], $exception->getMessage());
+        return new Response(500, [], 'Internal Server Error');
     }
 }

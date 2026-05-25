@@ -1,0 +1,19 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(php -v)",
+      "Bash(php -l app/expose/utils/Rsa.php)",
+      "Bash(php -l app/Basic.php)",
+      "Bash(php -l app/exception/Handler.php)",
+      "Bash(php -l app/expose/trait/Json.php)",
+      "Bash(php -l app/expose/helper/Captcha.php)",
+      "Bash(php start.php start -d)",
+      "Bash(php start.php status)",
+      "Bash(php start.php stop)",
+      "Bash(php windows.php start -d)",
+      "Bash(php windows.php status)",
+      "Bash(php windows.php stop)",
+      "Bash(wsl sudo *)"
+    ]
+  }
+}

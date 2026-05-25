@@ -140,6 +140,9 @@ class DomainController extends Basic
         $id = $request->post('id');
         $field = $request->post('field');
         $value = $request->post('value');
+        if (!in_array($field, $this->allowedStateFields)) {
+            return $this->fail('不允许更新该字段');
+        }
         $model = $this->model->where(['id' => $id])->find();
         if (!$model) {
             return $this->fail('数据不存在');
@@ -164,7 +167,19 @@ class DomainController extends Basic
             try {
                 $content = file_get_contents($file);
                 if ($data['verify_type'] === 'file') {
-                    $remote_content = file_get_contents('http://' . $data['domain'] . '/' . $file_name);
+                    // SSRF 防护：验证域名解析到公网 IP
+                    $dns = dns_get_record($data['domain'], DNS_A);
+                    $privateRanges = ['10.', '172.16.', '172.17.', '172.18.', '172.19.', '172.20.', '172.21.', '172.22.', '172.23.', '172.24.', '172.25.', '172.26.', '172.27.', '172.28.', '172.29.', '172.30.', '172.31.', '192.168.', '127.'];
+                    foreach ($dns as $record) {
+                        if (isset($record['ip'])) {
+                            foreach ($privateRanges as $prefix) {
+                                if (str_starts_with($record['ip'], $prefix)) {
+                                    throw new \Exception('域名指向内网地址，不允许验证');
+                                }
+                            }
+                        }
+                    }
+                    $remote_content = @file_get_contents('http://' . $data['domain'] . '/' . $file_name);
                     if ($content !== $remote_content) {
                         throw new \Exception('验证失败');
                     }
@@ -255,11 +270,16 @@ class DomainController extends Basic
     public function downloadFile(Request $request)
     {
         $file_name = $request->get('file_name');
+        $file_name = basename($file_name);
         $file = runtime_path('temp/') . $file_name;
-        if (file_exists($file)) {
-            return response()->download($file, $file_name);
+        if (!file_exists($file)) {
+            return $this->fail('文件不存在');
         }
-        return $this->fail('文件不存在');
+        $real = realpath($file);
+        if ($real && !str_starts_with($real, realpath(runtime_path('temp/')))) {
+            return $this->fail('文件不存在');
+        }
+        return response()->download($file, $file_name);
     }
     public function verifyDomainRecord($domain, $content)
     {

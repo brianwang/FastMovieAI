@@ -97,21 +97,11 @@ trait Attribute
     /**
      * 获取主键名.
      *
-     * @return string|array
+     * @return null|string|array
      */
     public function getPk()
     {
-        return $this->getOption('pk', 'id');
-    }
-
-    /**
-     * 获取自增键名.
-     *
-     * @return string
-     */
-    public function getAutoInc()
-    {
-        return $this->getOption('autoInc', $this->getPk());
+        return $this->getOption('pk');
     }
 
     /**
@@ -209,9 +199,10 @@ trait Attribute
             if (class_exists($type) && !($value instanceof $type)) {
                 if (is_subclass_of($type, Typeable::class)) {
                     $value = $type::from($value, $model);
-                    if ($value instanceof DateTime && $param) {
+                    if ($param && $value instanceof DateTime) {
+                        // 设置时间输出格式
                         $value->setFormat($param);
-                    }                    
+                    }
                 } elseif (is_subclass_of($type, FieldTypeTransform::class)) {
                     $value = $type::get($value, $model);
                 } elseif (is_subclass_of($type, BackedEnum::class)) {
@@ -416,13 +407,15 @@ trait Attribute
      * 获取原始数据.
      *
      * @param string|null $name 字段名
+     * @param bool $transform 是否自动类型转换
      * @return mixed
      */
-    public function getOrigin(?string $name = null)
+    public function getOrigin(?string $name = null, bool $transfrom = false)
     {
         if ($name) {
-            $name = $this->getRealFieldName($name);
-            return $this->getWeakData('origin', $name);
+            $name   = $this->getRealFieldName($name);
+            $result = $this->getWeakData('origin', $name);
+            return $transfrom ? $this->writeTransform($result, $this->getFields($name)) : $result;
         }
         return $this->getOption('origin');
     }
@@ -688,6 +681,21 @@ trait Attribute
     public function setAttr(string $name, $value)
     {
         return $this->set($name, $value);
+    }
+
+    /**
+     * 批量设置数据对象值 支持数据类型转换
+     *
+     * @param array $data 数据
+     *
+     * @return void
+     */
+    public function setAttrs(array $data): void
+    {
+        // 进行数据处理
+        foreach ($data as $key => $value) {
+            $this->set($key, $value);
+        }
     }
 
     /**

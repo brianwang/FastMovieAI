@@ -9,8 +9,8 @@ class ComposerStaticInit31dbebff699f6ce4d696d736e935f142
     public static $files = array (
         '6e3fae29631ef280660b3cdad06f25a8' => __DIR__ . '/..' . '/symfony/deprecation-contracts/function.php',
         '7b11c4dc42b3b3023073cb14e519683c' => __DIR__ . '/..' . '/ralouphie/getallheaders/src/getallheaders.php',
-        '37a3dc5111fe8f707ab4c132ef1dbc62' => __DIR__ . '/..' . '/guzzlehttp/guzzle/src/functions_include.php',
         '0e6d7bf4a5811bfa5cf40c5ccd6fae6a' => __DIR__ . '/..' . '/symfony/polyfill-mbstring/bootstrap.php',
+        '37a3dc5111fe8f707ab4c132ef1dbc62' => __DIR__ . '/..' . '/guzzlehttp/guzzle/src/functions_include.php',
         'd767e4fc2dc52fe66584ab8c6684783e' => __DIR__ . '/..' . '/adbario/php-dot-notation/src/helpers.php',
         '60799491728b879e74601d83e38b2cad' => __DIR__ . '/..' . '/illuminate/collections/helpers.php',
         'a4a119a56e50fbb293281d9a48007e0e' => __DIR__ . '/..' . '/symfony/polyfill-php80/bootstrap.php',
@@ -132,7 +132,6 @@ class ComposerStaticInit31dbebff699f6ce4d696d736e935f142
             'Overtrue\\Flysystem\\Qiniu\\' => 25,
             'Overtrue\\Flysystem\\Cos\\' => 23,
             'Overtrue\\CosClient\\' => 19,
-            'OneSm\\' => 6,
             'OSS\\' => 4,
         ),
         'M' => 
@@ -193,12 +192,9 @@ class ComposerStaticInit31dbebff699f6ce4d696d736e935f142
         array (
             'Aws\\' => 4,
             'App\\' => 4,
-            'AlibabaCloud\\Tea\\XML\\' => 21,
-            'AlibabaCloud\\Tea\\Utils\\' => 23,
             'AlibabaCloud\\Tea\\' => 17,
             'AlibabaCloud\\SDK\\Dysmsapi\\V20170525\\' => 36,
-            'AlibabaCloud\\OpenApiUtil\\' => 25,
-            'AlibabaCloud\\Endpoint\\' => 22,
+            'AlibabaCloud\\Dara\\' => 18,
             'AlibabaCloud\\Credentials\\' => 25,
             'Alchemy\\BinaryDriver\\' => 21,
             'Adbar\\' => 6,
@@ -452,10 +448,6 @@ class ComposerStaticInit31dbebff699f6ce4d696d736e935f142
         array (
             0 => __DIR__ . '/..' . '/overtrue/qcloud-cos-client/src',
         ),
-        'OneSm\\' => 
-        array (
-            0 => __DIR__ . '/..' . '/lizhichao/one-sm/src',
-        ),
         'OSS\\' => 
         array (
             0 => __DIR__ . '/..' . '/aliyuncs/oss-sdk-php/src/OSS',
@@ -557,7 +549,7 @@ class ComposerStaticInit31dbebff699f6ce4d696d736e935f142
         ),
         'Darabonba\\OpenApi\\' => 
         array (
-            0 => __DIR__ . '/..' . '/alibabacloud/darabonba-openapi/src',
+            0 => __DIR__ . '/..' . '/alibabacloud/openapi-core/src',
         ),
         'Darabonba\\GatewaySpi\\' => 
         array (
@@ -579,14 +571,6 @@ class ComposerStaticInit31dbebff699f6ce4d696d736e935f142
         array (
             0 => __DIR__ . '/../..' . '/app',
         ),
-        'AlibabaCloud\\Tea\\XML\\' => 
-        array (
-            0 => __DIR__ . '/..' . '/alibabacloud/tea-xml/src',
-        ),
-        'AlibabaCloud\\Tea\\Utils\\' => 
-        array (
-            0 => __DIR__ . '/..' . '/alibabacloud/tea-utils/src',
-        ),
         'AlibabaCloud\\Tea\\' => 
         array (
             0 => __DIR__ . '/..' . '/alibabacloud/tea/src',
@@ -595,13 +579,9 @@ class ComposerStaticInit31dbebff699f6ce4d696d736e935f142
         array (
             0 => __DIR__ . '/..' . '/alibabacloud/dysmsapi-20170525/src',
         ),
-        'AlibabaCloud\\OpenApiUtil\\' => 
+        'AlibabaCloud\\Dara\\' => 
         array (
-            0 => __DIR__ . '/..' . '/alibabacloud/openapi-util/src',
-        ),
-        'AlibabaCloud\\Endpoint\\' => 
-        array (
-            0 => __DIR__ . '/..' . '/alibabacloud/endpoint-util/src',
+            0 => __DIR__ . '/..' . '/alibabacloud/darabonba/src',
         ),
         'AlibabaCloud\\Credentials\\' => 
         array (

@@ -1,11 +1,13 @@
 <?php
 
 use plugin\article\process\JoinPushMessage;
-use Workerman\Events\Swoole;
+
+// Swoole is optional — falls back to Workerman default event loop
+$swooleClass = class_exists(\Swoole\Coroutine::class) ? \Workerman\Events\Swoole::class : null;
 
 return [
     'JoinPushMessage' => [
-        'eventLoop' => Swoole::class,
+        'eventLoop' => $swooleClass,
         'handler'  => JoinPushMessage::class
     ],
 ];
